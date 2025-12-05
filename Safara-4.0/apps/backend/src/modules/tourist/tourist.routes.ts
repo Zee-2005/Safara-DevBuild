@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { createTrip, getMyTrips, getTrip, uploadDocs } from './tourist.controller.js';
+import { createTrip, getMyTrips, getTrip, uploadDocs , getTouristByTid} from './tourist.controller.js';
 
 export const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -28,3 +28,5 @@ router.post(
   ]),
   asyncHandler(uploadDocs)
 );
+
+router.get('/:tid', getTouristByTid);

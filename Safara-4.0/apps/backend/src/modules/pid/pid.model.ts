@@ -31,7 +31,7 @@ const PersonalIdApplicationSchema = new Schema(
     aadhaarHash: { type: String },    // SHA-256 of Aadhaar number
     dob: { type: String }  ,
     // inside schema definition
-personalId: { type: String, unique: true }, // NEW
+personalId: { type: String }, // NEW
 
   },
   { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } }

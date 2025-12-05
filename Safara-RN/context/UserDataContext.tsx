@@ -18,6 +18,7 @@ import {
 import { readTripDraft, clearTripDraft } from "@/lib/trip";
 
 interface PersonalData {
+  id: string;
   pid_application_id?: string | null;
   pid_full_name?: string | null;
   pid_mobile?: string | null;

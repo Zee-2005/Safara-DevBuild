@@ -186,3 +186,33 @@ export async function uploadDocs(req: Request, res: Response) {
   return res.status(200).json({ ok: true, tid: trip.tid, travelerType: trip.travelerType });
 }
 
+export const getTouristByTid = async (req: Request, res: Response) => {
+  try {
+    const { tid } = req.params;
+
+    const tourist = await TouristTrip.findOne({ tid });
+
+    if (!tourist) {
+      return res.status(404).json({ message: 'Tourist not found' });
+    }
+
+    // Prepare data to send in response
+    const responseData = {
+      tid: tourist.tid,
+      holderPid: tourist.holderPid,
+      destination: tourist.destination,
+      status: tourist.status,
+      startDate: tourist.startDate,
+      endDate: tourist.endDate,
+      travelerType: tourist.travelerType,
+      agencyId: tourist.agencyId,
+      homeCity: tourist.homeCity,
+      itinerary: tourist.itinerary,
+    };
+
+    return res.json(responseData);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};

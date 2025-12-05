@@ -49,6 +49,8 @@ export default function Index() {
     dob: null,
   });
 
+   const [hasActiveTour, setHasActiveTour] = useState(false);
+  const [initialTourChecked, setInitialTourChecked] = useState(false);
   const [safetyActive, setSafetyActive] = useState(false);
   const [planTripActive, setPlanTripActive] = useState(false);
   const [agencyBrowseActive, setAgencyBrowseActive] = useState(false);
@@ -57,6 +59,8 @@ export default function Index() {
   const [documentsActive, setDocumentsActive] = useState(false);
 
   const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  
 
   useEffect(() => {
     if (userEmail) {
@@ -261,8 +265,8 @@ export default function Index() {
             } else if (section === "plan-journey") {
               setPlanTripActive(true);
             } else if (section === "documents") {
-      setDocumentsActive(true);
-    }
+              setDocumentsActive(true);
+            }
           }}
           onLogout={() => {
             setLoggedInUser(null);
@@ -270,6 +274,19 @@ export default function Index() {
             setUserEmail(null);
             setConfirmedLanguage(null);
             setPersonalId(null);
+            setHasActiveTour(false);
+            setInitialTourChecked(false);
+          }}
+        onTouristStatusChange={(hasActive) => {
+            setHasActiveTour(hasActive);
+            if (hasActive) {
+              // As soon as there is an active tour,
+              // HomeScreen itself will automatically switch to Tour tab
+              // via its internal effect. No extra redirect needed here.
+            }
+          }}
+          onViewModeChange={() => {
+            // optional: hook for analytics or future logic
           }}
         />
       </SafeAreaView>

@@ -104,44 +104,14 @@ console.log(localStorage.getItem('DEFAULT_USER:tourist_id_record'));
     !b ? Promise.resolve(undefined)
        : new Promise<string>((res) => { const r = new FileReader(); r.onloadend = () => res(r.result as string); r.readAsDataURL(b); });
 
-  // replace handleSubmitDetails with socket emit
-  // const handleSubmitDetails = async () => {
-  //   try {
-  //     const audio = await blobToDataUrl(audioBlob);
-  //     const video = await blobToDataUrl(videoBlob);
-  //     const photo = await blobToDataUrl(photoBlob);
 
-  //     // Pull lightweight identity available in app/session
-  //     const touristId = localStorage.getItem('tourist_id') || undefined;
-  //     const touristName = localStorage.getItem('tourist_name') || undefined;
-  //     const touristPhone = localStorage.getItem('userId') || undefined;
-
-  //     const payload = {
-  //       id: crypto.randomUUID(),
-  //       touristId,
-  //       touristName,
-  //       touristPhone,
-  //       location: userLocation, // {lat,lng}
-  //       description,
-  //       media: { audio, video, photo },
-  //     };
-
-  //     socketRef.current?.emit('sos-create', payload);
-  //     setStage('escalation');
-  //     (window as any).currentEmergencyId = payload.id;
-  //   } catch (e) {
-  //     console.error('❌ SOS emit failed', e);
-  //     alert('Failed to create emergency alert. Please call 112 directly.');
-  //   }
-  // };
   const handleSubmitDetails = async () => {
   try {
     const audio = await blobToDataUrl(audioBlob);
     const video = await blobToDataUrl(videoBlob);
     const photo = await blobToDataUrl(photoBlob);
 
-    // ✅ Real tourist info from localStorage (if logged in)
-    //const touristId = localStorage.getItem('t_id') || "T-DEMO-001";
+  
     const pid_full_name = localStorage.getItem('pid_full_name') || "Demo Tourist";
     const pid_mobile = localStorage.getItem('pid_mobile') || "+911234567890";
 
@@ -180,10 +150,6 @@ console.log(t);
     alert('Failed to create emergency alert. Please call 112 directly.');
   }
 };
-
-  
-
-
   const handleEscalateToERSS = async () => {
     try {
       const emergencyId = (window as any).currentEmergencyId;
@@ -198,15 +164,9 @@ console.log(t);
          // console.log('🚨 Emergency escalated:', result);
         }
       }
-
-      // Attempt to open phone dialer for emergency call
       const phoneNumber = '112';
       const telUrl = `tel:${phoneNumber}`;
-      
-      // Try to open the phone dialer
       window.location.href = telUrl;
-      
-      // Fallback: Show emergency information
       setTimeout(() => {
         const emergencyInfo = `
 🚨 EMERGENCY - Call Immediately:

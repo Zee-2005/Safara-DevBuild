@@ -23,6 +23,7 @@ import Badge from "../ui/Badge";
 import ActivatedTourMode, {
   TouristId,
 } from "./ActivatedTourMode";
+import SOSEmergency from "./SOSEmergency";
 import { getMyTrips } from "../../lib/tourist.service";
 
 interface HomeScreenProps {
@@ -34,6 +35,11 @@ interface HomeScreenProps {
   onToggleTheme: () => void;
   onNavigate: (section: string) => void;
   onLogout?: () => void;
+  // NEW:
+  onTouristStatusChange?: (hasActiveTour: boolean) => void;
+  onViewModeChange?: (
+    mode: "home" | "tour" | "chat" | "community" | "profile"
+  ) => void;
 }
 
 type TripItem = {
@@ -55,6 +61,8 @@ export default function HomeScreen({
   onToggleTheme,
   onNavigate,
   onLogout,
+  onTouristStatusChange,
+  onViewModeChange,
 }: HomeScreenProps) {
   const [trips, setTrips] = useState<TripItem[]>([]);
   const [showTrips, setShowTrips] = useState(false);
@@ -64,6 +72,8 @@ export default function HomeScreen({
     "home" | "tour" | "chat" | "community" | "profile"
   >("home");
   const [initialViewSet, setInitialViewSet] = useState(false);
+
+  const [showSOS, setShowSOS] = useState(false);
 
   const isDark = theme === "dark";
 
@@ -104,6 +114,8 @@ export default function HomeScreen({
       }
     : null;
 
+  const hasActiveTour = !!activeTrip;
+
   // Initial tab selection: Tour if active trip exists, otherwise Home
   useEffect(() => {
     if (!initialViewSet) {
@@ -112,6 +124,19 @@ export default function HomeScreen({
       setInitialViewSet(true);
     }
   }, [activeTrip, initialViewSet]);
+
+  // Notify parent when tourist active status changes
+  useEffect(() => {
+    if (onTouristStatusChange) {
+      onTouristStatusChange(hasActiveTour);
+    }
+  }, [hasActiveTour, onTouristStatusChange]);
+
+  useEffect(() => {
+    if (onViewModeChange) {
+      onViewModeChange(viewMode);
+    }
+  }, [viewMode, onViewModeChange]);
 
   function daysBetween(a: string, b: string): number {
     const d1 = new Date(a);
@@ -170,14 +195,14 @@ export default function HomeScreen({
       badge: null,
     },
     {
-    id: "documents", // NEW
-    title: "Documents",
-    description: "Store, manage and access your travel files",
-    icon: "documents",
-    status: isGuest ? "limited" : "available",
-    color: "#0ea5e9",
-    badge: null,
-  },
+      id: "documents", // NEW
+      title: "Documents",
+      description: "Store, manage and access your travel files",
+      icon: "documents",
+      status: isGuest ? "limited" : "available",
+      color: "#0ea5e9",
+      badge: null,
+    },
     {
       id: "personal-safety",
       title: "Personal Safety",
@@ -513,185 +538,196 @@ export default function HomeScreen({
   }
 
   return (
-    // <SafeAreaView
-    //   style={{ flex: 1, backgroundColor: isDark ? "#020617" : "#f9fafb" }}
-    //   edges={["top", "left", "right"]}
-    // >
-      <View style={{ flex: 1 }}>
-        {viewMode === "home" && renderHomeContent()}
-        {viewMode === "tour" && (
-          <ActivatedTourMode
-            touristId={touristIdForTourMode}
-            theme={theme}
-            onSOS={() => {
-              // hook into SOS later
-            }}
-            onNavigate={onNavigate}
-            onLogout={onLogout || (() => {})}
-          />
+    <View style={{ flex: 1 }}>
+      {viewMode === "home" && renderHomeContent()}
+      {viewMode === "tour" && (
+        <ActivatedTourMode
+          touristId={touristIdForTourMode}
+          theme={theme}
+          onSOS={() => {
+            setShowSOS(true);
+          }}
+          onNavigate={onNavigate}
+          onLogout={onLogout || (() => {})}
+        />
+      )}
+      {viewMode === "chat" &&
+        renderPlaceholder("Chatbot", "Smart travel assistant coming soon.")}
+      {viewMode === "community" &&
+        renderPlaceholder(
+          "Community & Alerts",
+          "Recent news, alerts and local communities will appear here."
         )}
-        {viewMode === "chat" &&
-          renderPlaceholder("Chatbot", "Smart travel assistant coming soon.")}
-        {viewMode === "community" &&
-          renderPlaceholder(
-            "Community & Alerts",
-            "Recent news, alerts and local communities will appear here."
-          )}
-        {viewMode === "profile" &&
-          renderPlaceholder(
-            "Profile",
-            "Manage your account, preferences and saved trips here."
-          )}
+      {viewMode === "profile" &&
+        renderPlaceholder(
+          "Profile",
+          "Manage your account, preferences and saved trips here."
+        )}
 
-        {/* Footer with 5 tabs */}
-        <View
+      {/* SOS Emergency modal */}
+      <Modal
+        visible={showSOS}
+        animationType="slide"
+        onRequestClose={() => setShowSOS(false)}
+      >
+        <SOSEmergency
+          // userLocation can be wired from a location context/hook later
+          userLocation={undefined}
+          onCancel={() => setShowSOS(false)}
+          onEscalate={() => {
+            setShowSOS(false);
+          }}
+        />
+      </Modal>
+
+      {/* Footer with 5 tabs */}
+      <View
+        style={[
+          styles.footerTabs,
+          { backgroundColor: isDark ? "#020617" : "#ffffff" },
+        ]}
+      >
+        <TouchableOpacity
           style={[
-            styles.footerTabs,
-            { backgroundColor: isDark ? "#020617" : "#ffffff" },
+            styles.footerTab,
+            viewMode === "home" && styles.footerTabActive,
           ]}
+          onPress={() => setViewMode("home")}
         >
-          <TouchableOpacity
+          <Feather
+            name="home"
+            size={18}
+            color={
+              viewMode === "home"
+                ? "#0b0b0b"
+                : isDark
+                ? "#e5e7eb"
+                : "#6b7280"
+            }
+          />
+          <Text
             style={[
-              styles.footerTab,
-              viewMode === "home" && styles.footerTabActive,
+              styles.footerTabText,
+              viewMode === "home" && styles.footerTabTextActive,
             ]}
-            onPress={() => setViewMode("home")}
           >
-            <Feather
-              name="home"
-              size={18}
-              color={
-                viewMode === "home"
-                  ? "#0b0b0b"
-                  : isDark
-                  ? "#e5e7eb"
-                  : "#6b7280"
-              }
-            />
-            <Text
-              style={[
-                styles.footerTabText,
-                viewMode === "home" && styles.footerTabTextActive,
-              ]}
-            >
-              Home
-            </Text>
-          </TouchableOpacity>
+            Home
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
+        <TouchableOpacity
+          style={[
+            styles.footerTab,
+            viewMode === "tour" && styles.footerTabActive,
+          ]}
+          onPress={() => setViewMode("tour")}
+        >
+          <Feather
+            name="shield"
+            size={18}
+            color={
+              viewMode === "tour"
+                ? "#0b0b0b"
+                : isDark
+                ? "#e5e7eb"
+                : "#6b7280"
+            }
+          />
+          <Text
             style={[
-              styles.footerTab,
-              viewMode === "tour" && styles.footerTabActive,
+              styles.footerTabText,
+              viewMode === "tour" && styles.footerTabTextActive,
             ]}
-            onPress={() => setViewMode("tour")}
           >
-            <Feather
-              name="shield"
-              size={18}
-              color={
-                viewMode === "tour"
-                  ? "#0b0b0b"
-                  : isDark
-                  ? "#e5e7eb"
-                  : "#6b7280"
-              }
-            />
-            <Text
-              style={[
-                styles.footerTabText,
-                viewMode === "tour" && styles.footerTabTextActive,
-              ]}
-            >
-              Tour
-            </Text>
-          </TouchableOpacity>
+            Tour
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
+        <TouchableOpacity
+          style={[
+            styles.footerTab,
+            viewMode === "chat" && styles.footerTabActive,
+          ]}
+          onPress={() => setViewMode("chat")}
+        >
+          <Feather
+            name="message-circle"
+            size={18}
+            color={
+              viewMode === "chat"
+                ? "#0b0b0b"
+                : isDark
+                ? "#e5e7eb"
+                : "#6b7280"
+            }
+          />
+          <Text
             style={[
-              styles.footerTab,
-              viewMode === "chat" && styles.footerTabActive,
+              styles.footerTabText,
+              viewMode === "chat" && styles.footerTabTextActive,
             ]}
-            onPress={() => setViewMode("chat")}
           >
-            <Feather
-              name="message-circle"
-              size={18}
-              color={
-                viewMode === "chat"
-                  ? "#0b0b0b"
-                  : isDark
-                  ? "#e5e7eb"
-                  : "#6b7280"
-              }
-            />
-            <Text
-              style={[
-                styles.footerTabText,
-                viewMode === "chat" && styles.footerTabTextActive,
-              ]}
-            >
-              Chat
-            </Text>
-          </TouchableOpacity>
+            Chat
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
+        <TouchableOpacity
+          style={[
+            styles.footerTab,
+            viewMode === "community" && styles.footerTabActive,
+          ]}
+          onPress={() => setViewMode("community")}
+        >
+          <Feather
+            name="users"
+            size={18}
+            color={
+              viewMode === "community"
+                ? "#0b0b0b"
+                : isDark
+                ? "#e5e7eb"
+                : "#6b7280"
+            }
+          />
+          <Text
             style={[
-              styles.footerTab,
-              viewMode === "community" && styles.footerTabActive,
+              styles.footerTabText,
+              viewMode === "community" && styles.footerTabTextActive,
             ]}
-            onPress={() => setViewMode("community")}
           >
-            <Feather
-              name="users"
-              size={18}
-              color={
-                viewMode === "community"
-                  ? "#0b0b0b"
-                  : isDark
-                  ? "#e5e7eb"
-                  : "#6b7280"
-              }
-            />
-            <Text
-              style={[
-                styles.footerTabText,
-                viewMode === "community" && styles.footerTabTextActive,
-              ]}
-            >
-              Community
-            </Text>
-          </TouchableOpacity>
+            Community
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
+        <TouchableOpacity
+          style={[
+            styles.footerTab,
+            viewMode === "profile" && styles.footerTabActive,
+          ]}
+          onPress={() => setViewMode("profile")}
+        >
+          <Feather
+            name="user"
+            size={18}
+            color={
+              viewMode === "profile"
+                ? "#0b0b0b"
+                : isDark
+                ? "#e5e7eb"
+                : "#6b7280"
+            }
+          />
+          <Text
             style={[
-              styles.footerTab,
-              viewMode === "profile" && styles.footerTabActive,
+              styles.footerTabText,
+              viewMode === "profile" && styles.footerTabTextActive,
             ]}
-            onPress={() => setViewMode("profile")}
           >
-            <Feather
-              name="user"
-              size={18}
-              color={
-                viewMode === "profile"
-                  ? "#0b0b0b"
-                  : isDark
-                  ? "#e5e7eb"
-                  : "#6b7280"
-              }
-            />
-            <Text
-              style={[
-                styles.footerTabText,
-                viewMode === "profile" && styles.footerTabTextActive,
-              ]}
-            >
-              Profile
-            </Text>
-          </TouchableOpacity>
-        </View>
+            Profile
+          </Text>
+        </TouchableOpacity>
       </View>
-    // </SafeAreaView>
+    </View>
   );
 }
 

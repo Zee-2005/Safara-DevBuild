@@ -10,6 +10,7 @@ import { router as api } from './routes/index.js';
 import authRoutes from './routes/auths.routes.js';
  import uploadRoutes from './routes/upload.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import {router} from './modules/tourist/tourist.routes.js';
 
 import { fileURLToPath } from 'url';
 
@@ -34,7 +35,9 @@ const __dirname = path.dirname(__filename);
   app.use('/api/v1/auths', authRoutes);
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
   app.use('/api/v1/upload', uploadRoutes);
+  app.use('/api/tourist', router);
   app.use('/api', api);
+
 
   // ... previous middleware and routes
 app.use((_req, res) => res.status(404).json({ error: 'Not Found' }));

@@ -1,6 +1,7 @@
 // src/lib/session.ts (React Native)
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { TouristIdRecord } from './touristId';
 
 export type Session = { userId: string; displayName?: string };
 
@@ -60,4 +61,17 @@ export async function clearUserPidData(s?: Session | null): Promise<void> {
     "pid_email",
   ];
   await Promise.all(keys.map((k) => AsyncStorage.removeItem(userKey(k, session))));
+}
+
+export function getTouristFromLocal(): TouristIdRecord | null {
+  const raw = localStorage.getItem('YOUR_USERID:tourist_id_record'); // replace YOUR_USERID if using session key prefix
+  if (!raw) return null;
+
+  try {
+    const tourist: TouristIdRecord = JSON.parse(raw);
+    return tourist;
+  } catch (e) {
+    console.error('Failed to parse tourist record from localStorage', e);
+    return null;
+  }
 }
