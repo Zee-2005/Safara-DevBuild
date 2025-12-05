@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import API_BASE from "../config/api";
+import {API_BASE} from "../config/api";
 
 type Tokens = { access: string; refresh: string };
 type User = { id: string; email?: string | null; phone?: string | null };

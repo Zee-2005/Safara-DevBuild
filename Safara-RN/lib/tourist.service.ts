@@ -1,5 +1,5 @@
 // libs/tourist.service.ts (React Native)
-import API_BASE from '../config/api';
+import {API_BASE} from '../config/api';
 
 // const BASE = "http://192.168.0.100:3000/api/v1/tourist";
 

@@ -1,6 +1,9 @@
+// Uses Expo Location, ImagePicker, and AV Audio APIs for permissions and media capture [web:74][web:27][web:86]
+
 // src/components/screens/SOSEmergency.tsx
 
 import React, { useState, useEffect, useRef } from "react";
+import { SOCKET_API_BASE } from "../../config/api";
 import {
   View,
   Text,
@@ -15,11 +18,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io, Socket } from "socket.io-client";
 import Icon from "react-native-vector-icons/Feather";
 
+import * as Location from "expo-location";
+import * as ImagePicker from "expo-image-picker";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
+
 import { useUserData } from "@/context/UserDataContext";
 import { TouristIdRecord, saveTouristIdFromDraft } from "@/lib/touristId";
 
-const SOCKET_URL = "http://192.168.0.104:3000"; // update as needed
-const API_BASE_URL = "http://192.168.0.104:3000"; // update as needed
+const SOCKET_URL = `${SOCKET_API_BASE}`; // update as needed
+const API_BASE_URL = `${SOCKET_API_BASE}`; // update as needed
 
 type LatLng = { lat: number; lng: number };
 
@@ -62,6 +70,15 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
   const personalRef = useRef(personal);
   const touristRef = useRef(tourist);
 
+  const [currentLocation, setCurrentLocation] = useState<LatLng | undefined>(
+    userLocation
+  );
+  const [requestingLocation, setRequestingLocation] = useState(false);
+
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [audioBase64, setAudioBase64] = useState<string | undefined>(undefined);
+  const [photoBase64, setPhotoBase64] = useState<string | undefined>(undefined);
+
   // Keep refs synced with latest user data
   useEffect(() => {
     personalRef.current = personal;
@@ -96,23 +113,82 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
 
   // Socket connection setup
   useEffect(() => {
-  if (!SOCKET_URL) return;
-  const s = io(SOCKET_URL, { transports: ["websocket", "polling"] });
+    if (!SOCKET_URL) return;
+    const s = io(SOCKET_URL, { transports: ["websocket", "polling"] });
 
-  s.on("connect", () => {
-    console.log("✅ Socket connected", s.id);
-  });
+    s.on("connect", () => {
+      console.log("✅ Socket connected", s.id);
+    });
 
-  s.on("connect_error", (err) => {
-    console.log("❌ Socket connect_error", err.message);
-  });
+    s.on("connect_error", (err) => {
+      console.log("❌ Socket connect_error", err.message);
+    });
 
-  socketRef.current = s;
-  return () => {
-    try { s.disconnect(); } catch {}
-  };
-}, []);
+    socketRef.current = s;
+    return () => {
+      try {
+        s.disconnect();
+      } catch {}
+    };
+  }, []);
 
+  // Ask for foreground location and read current position when entering details stage
+  useEffect(() => {
+    if (stage !== "details") return;
+
+    let isMounted = true;
+
+    const requestAndGetLocation = async () => {
+      try {
+        setRequestingLocation(true);
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Location permission",
+            "Location permission was denied. Your SOS can still be sent, but location may not be attached."
+          );
+          return;
+        }
+
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Highest,
+        });
+        if (!isMounted) return;
+        setCurrentLocation({
+          lat: loc.coords.latitude,
+          lng: loc.coords.longitude,
+        });
+      } catch (e) {
+        if (isMounted) {
+          Alert.alert(
+            "Location error",
+            "Could not determine your current location. You can still send the SOS."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setRequestingLocation(false);
+        }
+      }
+    };
+
+    requestAndGetLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [stage]);
+
+  // Stop any ongoing recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        try {
+          recording.stopAndUnloadAsync();
+        } catch {}
+      }
+    };
+  }, [recording]);
 
   // Escalation countdown
   useEffect(() => {
@@ -143,9 +219,11 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
       const p: any = personalRef.current;
       const t: any = touristRef.current;
 
-      const location: LatLng | undefined = userLocation
-        ? { lat: userLocation.lat, lng: userLocation.lng }
-        : undefined;
+      const location: LatLng | undefined =
+        currentLocation ||
+        (userLocation
+          ? { lat: userLocation.lat, lng: userLocation.lng }
+          : undefined);
 
       const touristId =
         t?.id ||
@@ -169,21 +247,31 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
             ? description.trim()
             : "Demo SOS: Need urgent help near Rajwada Palace!",
         media: {
-          audio: undefined,
+          audio: audioBase64,
           video: undefined,
-          photo: undefined,
+          photo: photoBase64,
         },
         isDemo,
         timestamp: new Date().toISOString(),
       };
 
-      // Server generates incident ID; keep reference if you later echo it back
+      // Server generates incident ID; keep reference slot
       emergencyIdRef.current = payload.id;
+
+      console.log("📤 Sending SOS payload:", {
+        ...payload,
+        media: {
+          audio: !!payload.media.audio,
+          photo: !!payload.media.photo,
+          video: !!payload.media.video,
+        },
+      });
 
       socketRef.current?.emit("sos-create", payload);
 
       setStage("escalation");
     } catch (error) {
+      console.log("❌ SOS emit failed", error);
       Alert.alert(
         "Emergency failed",
         "Failed to create emergency alert. Please call 112 directly."
@@ -240,23 +328,84 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
     }
   };
 
-  const handleRecording = () => {
-    if (!isRecording) {
+  const handleRecording = async () => {
+    try {
+      if (!recording) {
+        const { status } = await Audio.requestPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Microphone permission",
+            "Microphone access is required to record audio evidence."
+          );
+          return;
+        }
+
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        const { recording: newRecording } =
+          await Audio.Recording.createAsync(
+            Audio.RecordingOptionsPresets.HIGH_QUALITY
+          );
+        setRecording(newRecording);
+        setIsRecording(true);
+      } else {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setIsRecording(false);
+        setRecording(null);
+
+        if (uri) {
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: "base64",
+          });
+          const dataUrl = `data:audio/m4a;base64,${base64}`;
+          setAudioBase64(dataUrl);
+        }
+      }
+    } catch (e) {
+      console.log("❌ Audio recording error", e);
       Alert.alert(
-        "Audio not available",
-        "Audio recording is not yet supported in this mobile build."
+        "Audio error",
+        "Could not record audio. Please try again or continue without audio."
       );
       setIsRecording(false);
-    } else {
-      setIsRecording(false);
+      setRecording(null);
     }
   };
 
-  const handleCamera = () => {
-    Alert.alert(
-      "Camera not available",
-      "Photo capture is not yet supported in this mobile build."
-    );
+  const handleCamera = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Camera permission",
+          "Camera access is required to capture photo evidence."
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0].base64) {
+        const base64 = result.assets[0].base64;
+        const dataUrl = `data:image/jpeg;base64,${base64}`;
+        setPhotoBase64(dataUrl);
+      }
+    } catch (e) {
+      console.log("❌ Camera error", e);
+      Alert.alert(
+        "Camera error",
+        "Could not capture photo. Please try again or continue without photo."
+      );
+    }
   };
 
   // --- UI RENDERING ---
@@ -365,11 +514,13 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
                 style={styles.infoIcon}
               />
               <Text style={styles.locationText}>
-                {userLocation
-                  ? `${userLocation.lat.toFixed(
+                {currentLocation
+                  ? `${currentLocation.lat.toFixed(
                       6
-                    )}, ${userLocation.lng.toFixed(6)}`
-                  : "Location being determined..."}
+                    )}, ${currentLocation.lng.toFixed(6)}`
+                  : requestingLocation
+                  ? "Location being determined..."
+                  : "Location permission required or unavailable"}
               </Text>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>Live</Text>
@@ -419,7 +570,7 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
                   style={styles.buttonIcon}
                 />
                 <Text style={styles.outlineSmallButtonText}>
-                  {isRecording ? "Recording..." : "Audio"}
+                  {isRecording ? "Stop Recording" : "Audio"}
                 </Text>
               </Pressable>
             </View>

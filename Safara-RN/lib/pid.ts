@@ -2,7 +2,7 @@
 //libs/pid.ts
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import API_BASE from '../config/api';
+import {API_BASE} from '../config/api';
 
 type RegisterResponse = {
   applicationId: string;
