@@ -1,7 +1,7 @@
 // src/components/screens/DocumentStorage.tsx
 
 import React, { useEffect, useState } from "react";
-import API_BASE from "../../config/api";
+import {API_BASE} from "../../config/api";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {
   View,

@@ -717,102 +717,6 @@ function stopZoneAlert(zoneKey: string) {
   }
 }
 
-// ===============================
-// 🚨 ZONE ALERT HANDLER
-// ===============================
-// socket.on("zone-alert", ({ touristId, zoneName, risk }) => {
-//   const myTid = touristRef.current?.tid || localStorage.getItem("current_tid");
-//   if (touristId !== myTid) return;
-
-//   const zoneKey = `${myTid}_${zoneName}`;
-
-//   // ===============================
-//   // 🎵 PLAY SOUND
-//   // ===============================
-//   playAlertSound(risk);
-
-//   // Call parent
-//   onGeofenceAlert?.({ type: "zone", name: zoneName, risk });
-
-//   // ===============================
-//   // ⚠️ TAILWIND POPUP ALERT
-//   // ===============================
-//   const alertDiv = document.createElement("div");
-//   alertDiv.className =
-//     "fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]";
-
-//   alertDiv.innerHTML = `
-//     <div class="bg-white rounded-xl shadow-2xl w-80 p-5 animate-bounce-in">
-//       <h2 class="text-red-600 font-bold text-lg mb-2 flex items-center gap-2">
-//         ⚠ Zone Alert
-//       </h2>
-
-//       <p class="text-gray-700 text-sm leading-relaxed mb-4">
-//         You entered a restricted zone:
-//         <span class="font-semibold text-black">${zoneName}</span><br/>
-//         Risk Level:
-//         <span class="font-bold ${risk === "high"
-//           ? "text-red-600"
-//           : risk === "medium"
-//           ? "text-orange-500"
-//           : "text-green-600"}">
-//           ${risk}
-//         </span>
-//       </p>
-
-//       <button id="closeZoneAlert" class="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 transition text-white font-medium">
-//         Close
-//       </button>
-//     </div>
-//   `;
-
-//   document.body.appendChild(alertDiv);
-// setTimeout(() => {
-//     const btn = document.getElementById("closeZoneAlert");
-//     if (btn) {
-//       btn.onclick = () => {
-//         alertDiv.remove();
-//       };
-//     }
-//   }, 100);
-//   // document.getElementById("closeZoneAlert")?.addEventListener("click", () => {
-//   //   alertDiv.remove();
-//   // });
-
-//   // ===============================
-//   // ⏱ REPEATING EVERY 10 MINUTES
-//   // ===============================
-//   if (!zoneAlertTimers[zoneKey]) {
-//     zoneAlertTimers[zoneKey] = setInterval(() => {
-//       // re-show popup
-//       playAlertSound(risk);
-
-//       const repeatDiv = document.createElement("div");
-//       repeatDiv.className =
-//         "fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]";
-
-//       repeatDiv.innerHTML = `
-//         <div class="bg-white rounded-xl shadow-2xl w-80 p-5 animate-bounce-in">
-//           <h2 class="text-red-600 font-bold text-lg mb-2">⚠ Zone Alert</h2>
-//           <p class="text-gray-700 text-sm mb-4">
-//             You are STILL inside zone:
-//             <b>${zoneName}</b><br/>
-//             Risk: <b>${risk}</b>
-//           </p>
-//           <button class="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 transition text-white font-medium closeRepeat">
-//             OK
-//           </button>
-//         </div>
-//       `;
-
-//       document.body.appendChild(repeatDiv);
-
-//       repeatDiv.querySelector(".closeRepeat")?.addEventListener("click", () =>
-//         repeatDiv.remove()
-//       );
-//     }, 10 * 60 * 1000); // 10 minutes
-//   }
-// });
 
 
 socket.on("zone-alert", ({ touristId, zoneName, risk }) => {
@@ -903,63 +807,6 @@ socket.on("zone-alert", ({ touristId, zoneName, risk }) => {
     }, 10 * 60 * 1000);
   }
 });
-
-// socket.on("zone-alert", ({ touristId, zoneName, risk }) => {
-//   const myTid = touristRef.current?.tid || localStorage.getItem("tourist_id");
-
-//   // FIXED ID CHECK
-//   if (Array.isArray(touristId)) {
-//     if (!touristId.includes(myTid)) return;
-//   } else {
-//     if (touristId !== myTid) return;
-//   }
-
-//   const zoneKey = `${myTid}_${zoneName}`;
-
-//   playAlertSound(risk);
-//   onGeofenceAlert?.({ type: "zone", name: zoneName, risk });
-
-//   const alertDiv = document.createElement("div");
-//   alertDiv.className = "fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]";
-
-//   alertDiv.innerHTML = `
-//     <div class="bg-white rounded-xl shadow-2xl w-80 p-5 animate-bounce-in">
-//       <h2 class="text-red-600 font-bold text-lg mb-2 flex items-center gap-2">⚠ Zone Alert</h2>
-//       <p class="text-gray-700 text-sm mb-4">
-//         You entered restricted zone: <b>${zoneName}</b><br>
-//         Risk: <b>${risk}</b>
-//       </p>
-//       <button class="closeZoneAlert w-full py-2 rounded-lg bg-red-600 text-white">Close</button>
-//     </div>
-//   `;
-//   document.body.appendChild(alertDiv);
-
-//   setTimeout(() => {
-//     alertDiv.querySelector(".closeZoneAlert")?.addEventListener("click", () => alertDiv.remove());
-//   }, 50);
-
-//   // Repeat reminder every 10 mins
-//   if (!zoneAlertTimers[zoneKey]) {
-//     zoneAlertTimers[zoneKey] = setInterval(() => {
-//       playAlertSound(risk);
-
-//       const repeatDiv = document.createElement("div");
-//       repeatDiv.className = "fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]";
-//       repeatDiv.innerHTML = `
-//         <div class="bg-white rounded-xl shadow-2xl w-80 p-5 animate-bounce-in">
-//           <h2 class="text-red-600 font-bold text-lg">⚠ Zone Warning</h2>
-//           <p class="text-gray-700 text-sm mb-3">
-//             You are still inside zone: <b>${zoneName}</b><br>
-//             Risk: <b>${risk}</b>
-//           </p>
-//           <button class="closeRepeat w-full py-2 rounded-lg bg-red-600 text-white">OK</button>
-//         </div>
-//       `;
-//       document.body.appendChild(repeatDiv);
-//       repeatDiv.querySelector(".closeRepeat")?.addEventListener("click", () => repeatDiv.remove());
-//     }, 10 * 60 * 1000);
-//   }
-// });
 
     // --- Heatmap ---
     socket.on("heatmap-update", async (points) => {
@@ -1091,3 +938,169 @@ function getAlertSound(risk?: string) {
   if (r === "medium") return "/sounds/medium-alert.mp3";
   return "/sounds/soft-alert.mp3";
 }
+
+
+
+
+
+
+
+// socket.on("zone-alert", ({ touristId, zoneName, risk }) => {
+//   const myTid = touristRef.current?.tid || localStorage.getItem("tourist_id");
+
+//   // FIXED ID CHECK
+//   if (Array.isArray(touristId)) {
+//     if (!touristId.includes(myTid)) return;
+//   } else {
+//     if (touristId !== myTid) return;
+//   }
+
+//   const zoneKey = `${myTid}_${zoneName}`;
+
+//   playAlertSound(risk);
+//   onGeofenceAlert?.({ type: "zone", name: zoneName, risk });
+
+//   const alertDiv = document.createElement("div");
+//   alertDiv.className = "fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]";
+
+//   alertDiv.innerHTML = `
+//     <div class="bg-white rounded-xl shadow-2xl w-80 p-5 animate-bounce-in">
+//       <h2 class="text-red-600 font-bold text-lg mb-2 flex items-center gap-2">⚠ Zone Alert</h2>
+//       <p class="text-gray-700 text-sm mb-4">
+//         You entered restricted zone: <b>${zoneName}</b><br>
+//         Risk: <b>${risk}</b>
+//       </p>
+//       <button class="closeZoneAlert w-full py-2 rounded-lg bg-red-600 text-white">Close</button>
+//     </div>
+//   `;
+//   document.body.appendChild(alertDiv);
+
+//   setTimeout(() => {
+//     alertDiv.querySelector(".closeZoneAlert")?.addEventListener("click", () => alertDiv.remove());
+//   }, 50);
+
+//   // Repeat reminder every 10 mins
+//   if (!zoneAlertTimers[zoneKey]) {
+//     zoneAlertTimers[zoneKey] = setInterval(() => {
+//       playAlertSound(risk);
+
+//       const repeatDiv = document.createElement("div");
+//       repeatDiv.className = "fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]";
+//       repeatDiv.innerHTML = `
+//         <div class="bg-white rounded-xl shadow-2xl w-80 p-5 animate-bounce-in">
+//           <h2 class="text-red-600 font-bold text-lg">⚠ Zone Warning</h2>
+//           <p class="text-gray-700 text-sm mb-3">
+//             You are still inside zone: <b>${zoneName}</b><br>
+//             Risk: <b>${risk}</b>
+//           </p>
+//           <button class="closeRepeat w-full py-2 rounded-lg bg-red-600 text-white">OK</button>
+//         </div>
+//       `;
+//       document.body.appendChild(repeatDiv);
+//       repeatDiv.querySelector(".closeRepeat")?.addEventListener("click", () => repeatDiv.remove());
+//     }, 10 * 60 * 1000);
+//   }
+// });
+
+
+
+
+
+
+
+// ===============================
+// 🚨 ZONE ALERT HANDLER
+// ===============================
+// socket.on("zone-alert", ({ touristId, zoneName, risk }) => {
+//   const myTid = touristRef.current?.tid || localStorage.getItem("current_tid");
+//   if (touristId !== myTid) return;
+
+//   const zoneKey = `${myTid}_${zoneName}`;
+
+//   // ===============================
+//   // 🎵 PLAY SOUND
+//   // ===============================
+//   playAlertSound(risk);
+
+//   // Call parent
+//   onGeofenceAlert?.({ type: "zone", name: zoneName, risk });
+
+//   // ===============================
+//   // ⚠️ TAILWIND POPUP ALERT
+//   // ===============================
+//   const alertDiv = document.createElement("div");
+//   alertDiv.className =
+//     "fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]";
+
+//   alertDiv.innerHTML = `
+//     <div class="bg-white rounded-xl shadow-2xl w-80 p-5 animate-bounce-in">
+//       <h2 class="text-red-600 font-bold text-lg mb-2 flex items-center gap-2">
+//         ⚠ Zone Alert
+//       </h2>
+
+//       <p class="text-gray-700 text-sm leading-relaxed mb-4">
+//         You entered a restricted zone:
+//         <span class="font-semibold text-black">${zoneName}</span><br/>
+//         Risk Level:
+//         <span class="font-bold ${risk === "high"
+//           ? "text-red-600"
+//           : risk === "medium"
+//           ? "text-orange-500"
+//           : "text-green-600"}">
+//           ${risk}
+//         </span>
+//       </p>
+
+//       <button id="closeZoneAlert" class="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 transition text-white font-medium">
+//         Close
+//       </button>
+//     </div>
+//   `;
+
+//   document.body.appendChild(alertDiv);
+// setTimeout(() => {
+//     const btn = document.getElementById("closeZoneAlert");
+//     if (btn) {
+//       btn.onclick = () => {
+//         alertDiv.remove();
+//       };
+//     }
+//   }, 100);
+//   // document.getElementById("closeZoneAlert")?.addEventListener("click", () => {
+//   //   alertDiv.remove();
+//   // });
+
+//   // ===============================
+//   // ⏱ REPEATING EVERY 10 MINUTES
+//   // ===============================
+//   if (!zoneAlertTimers[zoneKey]) {
+//     zoneAlertTimers[zoneKey] = setInterval(() => {
+//       // re-show popup
+//       playAlertSound(risk);
+
+//       const repeatDiv = document.createElement("div");
+//       repeatDiv.className =
+//         "fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]";
+
+//       repeatDiv.innerHTML = `
+//         <div class="bg-white rounded-xl shadow-2xl w-80 p-5 animate-bounce-in">
+//           <h2 class="text-red-600 font-bold text-lg mb-2">⚠ Zone Alert</h2>
+//           <p class="text-gray-700 text-sm mb-4">
+//             You are STILL inside zone:
+//             <b>${zoneName}</b><br/>
+//             Risk: <b>${risk}</b>
+//           </p>
+//           <button class="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 transition text-white font-medium closeRepeat">
+//             OK
+//           </button>
+//         </div>
+//       `;
+
+//       document.body.appendChild(repeatDiv);
+
+//       repeatDiv.querySelector(".closeRepeat")?.addEventListener("click", () =>
+//         repeatDiv.remove()
+//       );
+//     }, 10 * 60 * 1000); // 10 minutes
+//   }
+// });

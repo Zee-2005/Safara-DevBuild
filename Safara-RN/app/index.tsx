@@ -17,6 +17,7 @@ import AgencyBrowse from "../components/screens/AgencyBrowse";
 import DirectIdQuick from "../components/screens/DirectIdQuick";
 import TouristIdDocs from "../components/screens/TouristIdDocs";
 import DocumentStorage from "../components/screens/DocumentStorage";
+import TrackLocationScreen from "../components/screens/TrackLocationScreen";
 
 import { fetchAndSyncPersonalIdByEmail } from "../lib/personalId";
 
@@ -49,7 +50,7 @@ export default function Index() {
     dob: null,
   });
 
-   const [hasActiveTour, setHasActiveTour] = useState(false);
+  const [hasActiveTour, setHasActiveTour] = useState(false);
   const [initialTourChecked, setInitialTourChecked] = useState(false);
   const [safetyActive, setSafetyActive] = useState(false);
   const [planTripActive, setPlanTripActive] = useState(false);
@@ -57,10 +58,9 @@ export default function Index() {
   const [touristIdDocsActive, setTouristIdDocsActive] = useState(false);
   const [directIdActive, setDirectIdActive] = useState(false);
   const [documentsActive, setDocumentsActive] = useState(false);
+  const [trackLocationActive, setTrackLocationActive] = useState(false);
 
   const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  
 
   useEffect(() => {
     if (userEmail) {
@@ -109,14 +109,23 @@ export default function Index() {
   }
 
   if (documentsActive && userEmail) {
-  return (
-    <DocumentStorage
-      userEmail={userEmail}
-      theme={theme}
-      onBack={() => setDocumentsActive(false)}
-    />
-  );
-}
+    return (
+      <DocumentStorage
+        userEmail={userEmail}
+        theme={theme}
+        onBack={() => setDocumentsActive(false)}
+      />
+    );
+  }
+
+  if (trackLocationActive) {
+    const bgColor = theme === "light" ? "#f9fafb" : "#020617";
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+        <TrackLocationScreen onBack={() => setTrackLocationActive(false)} />
+      </SafeAreaView>
+    );
+  }
 
   if (pidStep === "create") {
     return (
@@ -199,7 +208,7 @@ export default function Index() {
         onBack={() => {
           setTouristIdDocsActive(false);
         }}
-        onSubmitted={(isActive: boolean) => {
+        onSubmitted={(_isActive: boolean) => {
           setTouristIdDocsActive(false);
           setPlanTripActive(false);
         }}
@@ -266,6 +275,8 @@ export default function Index() {
               setPlanTripActive(true);
             } else if (section === "documents") {
               setDocumentsActive(true);
+            } else if (section === "track-location") {
+              setTrackLocationActive(true);
             }
           }}
           onLogout={() => {
@@ -277,16 +288,14 @@ export default function Index() {
             setHasActiveTour(false);
             setInitialTourChecked(false);
           }}
-        onTouristStatusChange={(hasActive) => {
+          onTouristStatusChange={(hasActive) => {
             setHasActiveTour(hasActive);
             if (hasActive) {
-              // As soon as there is an active tour,
-              // HomeScreen itself will automatically switch to Tour tab
-              // via its internal effect. No extra redirect needed here.
+              // HomeScreen handles switching to Tour tab internally
             }
           }}
           onViewModeChange={() => {
-            // optional: hook for analytics or future logic
+            // optional: analytics hook
           }}
         />
       </SafeAreaView>

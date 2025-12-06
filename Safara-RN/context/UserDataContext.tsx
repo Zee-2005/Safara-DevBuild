@@ -46,7 +46,7 @@ const UserDataContext = createContext<UserDataContextType | undefined>(
 );
 
 export const UserDataProvider = ({ children }: { children: ReactNode }) => {
-  const [personal, setPersonal] = useState<PersonalData>({});
+  const [personal, setPersonal] = useState<PersonalData>({ id: "" });
   const [tourist, setTourist] = useState<TouristData>({});
 
   // 1️⃣ Load from AsyncStorage on mount
@@ -67,6 +67,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         pid_email: await getUserItem("pid_email", s),
         pid_personal_id: await getUserItem("pid_personal_id", s),
         pid_nationality: await getUserItem("pid_nationality", s),
+        id: ""
       };
       console.log("🟩 Personal (AsyncStorage):", savedPersonal);
       setPersonal(savedPersonal);
@@ -146,7 +147,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   // 6️⃣ Clear all (per-user)
   const clearAll = () => {
     console.log("🧹 Clearing All Data");
-    setPersonal({});
+    setPersonal({ id: "" });
     setTourist({});
     (async () => {
       const s: Session | null = await getSession();
