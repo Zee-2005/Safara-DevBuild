@@ -1,7 +1,7 @@
 // src/components/screens/HomeScreen.tsx
 // 5-tab footer: Home, Tour, Chatbot, Community, Profile + theme toggle
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -35,7 +35,6 @@ interface HomeScreenProps {
   onToggleTheme: () => void;
   onNavigate: (section: string) => void;
   onLogout?: () => void;
-  // NEW:
   onTouristStatusChange?: (hasActiveTour: boolean) => void;
   onViewModeChange?: (
     mode: "home" | "tour" | "chat" | "community" | "profile"
@@ -71,7 +70,6 @@ export default function HomeScreen({
   const [viewMode, setViewMode] = useState<
     "home" | "tour" | "chat" | "community" | "profile"
   >("home");
-  const [initialViewSet, setInitialViewSet] = useState(false);
 
   const [showSOS, setShowSOS] = useState(false);
 
@@ -105,27 +103,38 @@ export default function HomeScreen({
   const bellCount = active.length + upcoming.length;
 
   const activeTrip = active[0] || null;
+
+  // Extended TouristId passed into Tour Mode, including data needed for QR
   const touristIdForTourMode: TouristId | null = activeTrip
     ? {
         id: activeTrip.tid,
         destination: activeTrip.destination || "Unknown",
         validUntil: new Date(activeTrip.endDate),
         status: "active",
+        holderName: userEmail || userPhone || "Unknown tourist",
+        issueDate: new Date(activeTrip.startDate),
       }
     : null;
 
   const hasActiveTour = !!activeTrip;
 
-  // Initial tab selection: Tour if active trip exists, otherwise Home
-  useEffect(() => {
-    if (!initialViewSet) {
-      if (activeTrip) setViewMode("tour");
-      else setViewMode("home");
-      setInitialViewSet(true);
-    }
-  }, [activeTrip, initialViewSet]);
+  // Only auto-jump to Tour when trip first becomes active; allow manual tab changes
+  const prevHasActiveRef = useRef<boolean>(hasActiveTour);
 
-  // Notify parent when tourist active status changes
+  useEffect(() => {
+    const prev = prevHasActiveRef.current;
+
+    if (!prev && hasActiveTour) {
+      setViewMode("tour");
+    }
+
+    if (prev && !hasActiveTour && viewMode === "tour") {
+      setViewMode("home");
+    }
+
+    prevHasActiveRef.current = hasActiveTour;
+  }, [hasActiveTour, viewMode]);
+
   useEffect(() => {
     if (onTouristStatusChange) {
       onTouristStatusChange(hasActiveTour);
@@ -195,7 +204,7 @@ export default function HomeScreen({
       badge: null,
     },
     {
-      id: "documents", // NEW
+      id: "documents",
       title: "Documents",
       description: "Store, manage and access your travel files",
       icon: "documents",
@@ -275,7 +284,6 @@ export default function HomeScreen({
                 {newCount > 0 && <View style={styles.newDot} />}
               </TouchableOpacity>
             )}
-            {/* Theme toggle */}
             <TouchableOpacity
               onPress={onToggleTheme}
               style={styles.headerBtn}
@@ -386,7 +394,6 @@ export default function HomeScreen({
           </View>
         </ScrollView>
 
-        {/* Trips modal */}
         <Modal
           visible={showTrips}
           transparent
@@ -564,14 +571,12 @@ export default function HomeScreen({
           "Manage your account, preferences and saved trips here."
         )}
 
-      {/* SOS Emergency modal */}
       <Modal
         visible={showSOS}
         animationType="slide"
         onRequestClose={() => setShowSOS(false)}
       >
         <SOSEmergency
-          // userLocation can be wired from a location context/hook later
           userLocation={undefined}
           onCancel={() => setShowSOS(false)}
           onEscalate={() => {
@@ -580,7 +585,6 @@ export default function HomeScreen({
         />
       </Modal>
 
-      {/* Footer with 5 tabs */}
       <View
         style={[
           styles.footerTabs,

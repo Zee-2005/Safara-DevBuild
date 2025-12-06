@@ -15,6 +15,7 @@ import {
 } from "@expo/vector-icons";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
+import QRCodeDisplay from "./QRCodeDisplay";
 
 export type TouristIdStatus = "active" | "expiring" | "expired";
 
@@ -23,6 +24,8 @@ export interface TouristId {
   destination: string;
   validUntil: Date;
   status: TouristIdStatus;
+  holderName: string;
+  issueDate: Date;
 }
 
 interface ActivatedTourModeProps {
@@ -33,6 +36,8 @@ interface ActivatedTourModeProps {
   onLogout: () => void;
 }
 
+type TourToolView = "list" | "verify-identity";
+
 export default function ActivatedTourMode({
   touristId,
   theme,
@@ -41,6 +46,7 @@ export default function ActivatedTourMode({
   onLogout,
 }: ActivatedTourModeProps) {
   const [timeRemaining, setTimeRemaining] = useState<string>("—");
+  const [toolView, setToolView] = useState<TourToolView>("list");
 
   const isActive = !!touristId && touristId.status === "active";
   const isDark = theme === "dark";
@@ -124,9 +130,11 @@ export default function ActivatedTourMode({
   const cardBg = isDark ? "#020617" : "#ffffff";
   const cardBorder = isDark ? "#1f2937" : "transparent";
 
+  const showVerifyIdentity =
+    toolView === "verify-identity" && isActive && touristId;
+
   return (
     <View style={[styles.screen, { backgroundColor: bgScreen }]}>
-      {/* Top bar with logout */}
       <View
         style={[
           styles.topBar,
@@ -152,131 +160,173 @@ export default function ActivatedTourMode({
         </Button>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      >
-        {/* Status card (like a HomeScreen card) */}
-        <View
-          style={[
-            styles.statusCard,
-            { backgroundColor: cardBg, borderColor: cardBorder },
-          ]}
+      {showVerifyIdentity ? (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ paddingBottom: 24 }}
         >
-          <View style={styles.statusRow}>
-            <View>
-              <Text style={[styles.labelSmall, { color: textSub }]}>
-                Destination
+          <View style={styles.verifyHeaderRow}>
+            <TouchableOpacity
+              onPress={() => setToolView("list")}
+              style={styles.backRow}
+            >
+              <Feather name="arrow-left" size={18} color={textMain} />
+              <Text style={[styles.backText, { color: textMain }]}>
+                Back to tour tools
               </Text>
-              <Text style={[styles.destinationText, { color: textMain }]}>
-                {touristId?.destination || "No active tour"}
-              </Text>
-            </View>
-            <Badge variant="secondary">
-              <View style={styles.timeBadgeRow}>
-                <Feather name="clock" size={12} color="#111827" />
-                <Text style={styles.timeBadgeText}>{timeRemaining}</Text>
-              </View>
-            </Badge>
-          </View>
-          <View style={styles.warningRow}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={16}
-              color="#f59e0b"
-            />
-            <Text style={[styles.warningText, { color: textSub }]}>
-              Press and hold for 3 seconds to activate emergency protocols
+            </TouchableOpacity>
+            <Text style={[styles.verifyTitle, { color: textMain }]}>
+              Verify identity
             </Text>
           </View>
-          <View style={{ marginTop: 12 }}>
-            <Button
-              onPress={isActive ? onSOS : undefined}
-              disabled={!isActive}
-            >
-              <Text style={styles.sosText}>
-                {isActive ? "SOS Emergency" : "SOS disabled (no active tour)"}
-              </Text>
-            </Button>
-          </View>
-        </View>
 
-        {/* Features — layout copied from HomeScreen section tiles */}
-        <View style={{ marginTop: 16 }}>
-          <Text
+          <View style={{ marginTop: 12 }}>
+            <QRCodeDisplay
+              touristId={{
+                id: touristId.id,
+                destination: touristId.destination,
+                validUntil: touristId.validUntil,
+                status: touristId.status,
+                holderName: touristId.holderName,
+                issueDate: touristId.issueDate,
+              }}
+            />
+          </View>
+        </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ paddingBottom: 24 }}
+        >
+          <View
             style={[
-              styles.sectionTitle,
-              { color: textMain, marginBottom: 8 },
+              styles.statusCard,
+              { backgroundColor: cardBg, borderColor: cardBorder },
             ]}
           >
-            Tour tools
-          </Text>
-          {features.map((feature) => {
-            const disabled = !isActive;
-            return (
-              <TouchableOpacity
-                key={feature.id}
-                style={[
-                  styles.sectionCard,
-                  {
-                    backgroundColor: cardBg,
-                    borderColor: cardBorder,
-                    opacity: disabled ? 0.6 : 1,
-                  },
-                ]}
-                activeOpacity={disabled ? 1 : 0.8}
-                onPress={
-                  disabled ? undefined : () => onNavigate(feature.id)
-                }
-                disabled={disabled}
+            <View style={styles.statusRow}>
+              <View>
+                <Text style={[styles.labelSmall, { color: textSub }]}>
+                  Destination
+                </Text>
+                <Text style={[styles.destinationText, { color: textMain }]}>
+                  {touristId?.destination || "No active tour"}
+                </Text>
+              </View>
+              <Badge variant="secondary">
+                <View style={styles.timeBadgeRow}>
+                  <Feather name="clock" size={12} color="#111827" />
+                  <Text style={styles.timeBadgeText}>{timeRemaining}</Text>
+                </View>
+              </Badge>
+            </View>
+            <View style={styles.warningRow}>
+              <MaterialCommunityIcons
+                name="alert-circle-outline"
+                size={16}
+                color="#f59e0b"
+              />
+              <Text style={[styles.warningText, { color: textSub }]}>
+                Press SOS to activate emergency protocols
+              </Text>
+            </View>
+            <View style={{ marginTop: 12 }}>
+              <Button
+                onPress={isActive ? onSOS : undefined}
+                disabled={!isActive}
               >
-                <View style={styles.sectionInnerRow}>
-                  <View
-                    style={[
-                      styles.iconBox,
-                      { backgroundColor: feature.color },
-                    ]}
-                  >
-                    {renderIcon(feature.icon, 24, "#ffffff")}
-                  </View>
-                  <View style={styles.sectionTextContainer}>
-                    <View style={styles.sectionTitleRow}>
-                      <Text
-                        style={[
-                          styles.sectionTitleText,
-                          { color: textMain },
-                        ]}
-                      >
-                        {feature.title}
-                      </Text>
-                      {!isActive && (
-                        <Badge variant="outline">
-                          <Text style={styles.badgeText}>
-                            Requires active tour
-                          </Text>
-                        </Badge>
-                      )}
-                    </View>
-                    <Text
+                <Text style={styles.sosText}>
+                  {isActive ? "SOS Emergency" : "SOS disabled (no active tour)"}
+                </Text>
+              </Button>
+            </View>
+          </View>
+
+          <View style={{ marginTop: 16 }}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: textMain, marginBottom: 8 },
+              ]}
+            >
+              Tour tools
+            </Text>
+            {features.map((feature) => {
+              const disabled = !isActive;
+              const isVerify = feature.id === "verify-identity";
+
+              const onPress = () => {
+                if (disabled) return;
+                if (isVerify) {
+                  setToolView("verify-identity");
+                } else {
+                  onNavigate(feature.id);
+                }
+              };
+
+              return (
+                <TouchableOpacity
+                  key={feature.id}
+                  style={[
+                    styles.sectionCard,
+                    {
+                      backgroundColor: cardBg,
+                      borderColor: cardBorder,
+                      opacity: disabled ? 0.6 : 1,
+                    },
+                  ]}
+                  activeOpacity={disabled ? 1 : 0.8}
+                  onPress={onPress}
+                  disabled={disabled}
+                >
+                  <View style={styles.sectionInnerRow}>
+                    <View
                       style={[
-                        styles.sectionDescription,
-                        { color: textSub },
+                        styles.iconBox,
+                        { backgroundColor: feature.color },
                       ]}
                     >
-                      {feature.description}
-                    </Text>
+                      {renderIcon(feature.icon, 24, "#ffffff")}
+                    </View>
+                    <View style={styles.sectionTextContainer}>
+                      <View style={styles.sectionTitleRow}>
+                        <Text
+                          style={[
+                            styles.sectionTitleText,
+                            { color: textMain },
+                          ]}
+                        >
+                          {feature.title}
+                        </Text>
+                        {!isActive && (
+                          <Badge variant="outline">
+                            <Text style={styles.badgeText}>
+                              Requires active tour
+                            </Text>
+                          </Badge>
+                        )}
+                      </View>
+                      <Text
+                        style={[
+                          styles.sectionDescription,
+                          { color: textSub },
+                        ]}
+                      >
+                        {feature.description}
+                      </Text>
+                    </View>
+                    <Feather
+                      name="chevron-right"
+                      size={24}
+                      color="#6b7280"
+                    />
                   </View>
-                  <Feather
-                    name="chevron-right"
-                    size={24}
-                    color="#6b7280"
-                  />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -317,8 +367,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
   },
-
-  // Status card styled similarly to HomeScreen cards
   statusCard: {
     padding: 14,
     borderRadius: 12,
@@ -362,8 +410,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
   },
-
-  // Section / tile layout copied from HomeScreen
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
@@ -391,5 +437,24 @@ const styles = StyleSheet.create({
   badgeText: {
     color: "#e5e7eb",
     fontSize: 10,
+  },
+  verifyHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  backRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  backText: {
+    marginLeft: 4,
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  verifyTitle: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

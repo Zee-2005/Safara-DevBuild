@@ -16,10 +16,9 @@ import { io, Socket } from "socket.io-client";
 
 import { useUserData } from "@/context/UserDataContext";
 
-const SOCKET_URL = "http://192.168.0.106:3000"; // your backend socket URL
-const MAPTILER_KEY = "K183PqmMToR2O89INJ40";   // same key as web, change if needed
+const SOCKET_URL = "http://192.168.0.106:3000";
+const MAPTILER_KEY = "K183PqmMToR2O89INJ40";
 
-// Required by MapLibre RN; Mapbox token not needed, set to null to avoid crash. [web:113][web:129]
 MapLibreGL.setAccessToken(null);
 
 type LatLng = { lat: number; lng: number };
@@ -53,13 +52,12 @@ type BoundaryUpdatePayload = {
   radius?: number;
 };
 
-type HeatmapPoint = [number, number]; // [lng, lat]
-
+type HeatmapPoint = [number, number];
 type TimerHandle = ReturnType<typeof setInterval>;
 
-const DEFAULT_CENTER: [number, number] = [78.9629, 20.5937]; // India center [lng, lat]
+const DEFAULT_CENTER: [number, number] = [78.9629, 20.5937]; // [lng, lat]
+const DEFAULT_ZOOM = 5;
 
-// Repeating zone reminder timers (keyed by `${tid}_${zoneOrBoundaryName}`)
 const zoneAlertTimers: Record<string, TimerHandle> = {};
 
 function stopZoneAlert(zoneKey: string) {
@@ -71,13 +69,37 @@ function stopZoneAlert(zoneKey: string) {
   }
 }
 
-// Risk → color helper (for layers)
-function riskColor(risk?: string): string {
-  if (!risk) return "#22c55e";
-  const r = risk.toLowerCase();
-  if (r === "high") return "#ef4444";
-  if (r === "medium") return "#f97316";
-  return "#22c55e";
+// Approximate a geodesic circle as a polygon in lat/lng. [web:242]
+function makeCircleRing(
+  center: { lat: number; lng: number },
+  radiusMeters: number,
+  steps = 64
+): [number, number][] {
+  const R = 6378137; // Earth radius (m)
+  const d = radiusMeters / R;
+  const lat = (center.lat * Math.PI) / 180;
+  const lng = (center.lng * Math.PI) / 180;
+
+  const ring: [number, number][] = [];
+
+  for (let i = 0; i < steps; i++) {
+    const bearing = (2 * Math.PI * i) / steps;
+    const lat2 = Math.asin(
+      Math.sin(lat) * Math.cos(d) +
+        Math.cos(lat) * Math.sin(d) * Math.cos(bearing)
+    );
+    const lng2 =
+      lng +
+      Math.atan2(
+        Math.sin(bearing) * Math.sin(d) * Math.cos(lat),
+        Math.cos(d) - Math.sin(lat) * Math.sin(lat2)
+      );
+    ring.push([(lng2 * 180) / Math.PI, (lat2 * 180) / Math.PI]);
+  }
+
+  // close ring
+  ring.push(ring[0]);
+  return ring;
 }
 
 export default function MapComponent({
@@ -92,10 +114,10 @@ export default function MapComponent({
 
   const socketRef = useRef<Socket | null>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cameraRef = useRef<any>(null); // Camera ref for manual recenter
 
-  // GeoJSON state for sources
   const [touristFeatures, setTouristFeatures] = useState<any[]>([]);
-  const [zoneCircleFeatures, setZoneCircleFeatures] = useState<any[]>([]);
   const [zonePolygonFeatures, setZonePolygonFeatures] = useState<any[]>([]);
   const [boundaryFeatures, setBoundaryFeatures] = useState<any[]>([]);
   const [heatmapFeatures, setHeatmapFeatures] = useState<any[]>([]);
@@ -103,10 +125,8 @@ export default function MapComponent({
   const [currentLocation, setCurrentLocation] = useState<LatLng | undefined>(
     userLocation
   );
-
   const [requestingLocation, setRequestingLocation] = useState(false);
 
-  // Alert UI state
   const [zoneAlertVisible, setZoneAlertVisible] = useState(false);
   const [zoneAlertData, setZoneAlertData] = useState<{
     zoneName: string;
@@ -118,7 +138,6 @@ export default function MapComponent({
     null
   );
 
-  // Keep refs updated
   useEffect(() => {
     personalRef.current = personal;
     touristRef.current = tourist;
@@ -143,7 +162,6 @@ export default function MapComponent({
       const p: any = personalRef.current;
       const t: any = touristRef.current;
 
-      // Fallback to stored TID if needed
       const storedTid = await AsyncStorage.getItem("current_tid");
       const touristId = t?.tid || storedTid || null;
 
@@ -161,7 +179,7 @@ export default function MapComponent({
       console.log("❌ Map socket connect_error", err.message);
     });
 
-    // Other tourists' locations
+    // Other tourists
     socket.on("receive-location", (payload: any) => {
       const {
         id,
@@ -189,11 +207,8 @@ export default function MapComponent({
             coordinates: [longitude, latitude],
           },
         };
-        if (idx >= 0) {
-          next[idx] = feature;
-        } else {
-          next.push(feature);
-        }
+        if (idx >= 0) next[idx] = feature;
+        else next.push(feature);
         return next;
       });
     });
@@ -204,68 +219,55 @@ export default function MapComponent({
       );
     });
 
-    // Zones
+    // Zones (circle + polygon → always render as polygon in meters)
     socket.on("zone-update", (data: ZoneUpdatePayload) => {
-      const { id, name, risk, type, coords } = data;
+      const { id, name, risk, type, coords, radius } = data;
       if (!coords) return;
+
+      let ring: [number, number][] | null = null;
 
       if (type === "circle") {
         const center =
-          Array.isArray(coords) && coords.length > 0
-            ? coords[0]
-            : coords;
+          Array.isArray(coords) && coords.length > 0 ? coords[0] : coords;
         const lat = center.lat;
         const lng = center.lng;
         if (typeof lat !== "number" || typeof lng !== "number") return;
 
-        setZoneCircleFeatures((prev) => {
-          const others = prev.filter((f) => f.properties?.id !== id);
-          const feature = {
-            type: "Feature",
-            id,
-            properties: {
-              id,
-              name,
-              risk: risk || "low",
-            },
-            geometry: {
-              type: "Point",
-              coordinates: [lng, lat],
-            },
-          };
-          return [...others, feature];
-        });
+        const r = typeof radius === "number" ? radius : 200; // fallback
+        ring = makeCircleRing({ lat, lng }, r);
       } else if (type === "polygon") {
         const coordsArr: { lat: number; lng: number }[] = coords || [];
         if (!coordsArr.length) return;
-        const ring = coordsArr.map((c) => [c.lng, c.lat]);
-        // Close ring
+        const tmp = coordsArr.map((c) => [c.lng, c.lat]) as [number, number][];
         if (
-          ring.length > 0 &&
-          (ring[0][0] !== ring[ring.length - 1][0] ||
-            ring[0][1] !== ring[ring.length - 1][1])
+          tmp.length > 0 &&
+          (tmp[0][0] !== tmp[tmp.length - 1][0] ||
+            tmp[0][1] !== tmp[tmp.length - 1][1])
         ) {
-          ring.push(ring[0]);
+          tmp.push(tmp[0]);
         }
-
-        setZonePolygonFeatures((prev) => {
-          const others = prev.filter((f) => f.properties?.id !== id);
-          const feature = {
-            type: "Feature",
-            id,
-            properties: {
-              id,
-              name,
-              risk: risk || "low",
-            },
-            geometry: {
-              type: "Polygon",
-              coordinates: [ring],
-            },
-          };
-          return [...others, feature];
-        });
+        ring = tmp;
       }
+
+      if (!ring) return;
+
+      setZonePolygonFeatures((prev) => {
+        const others = prev.filter((f) => f.properties?.id !== id);
+        const feature = {
+          type: "Feature",
+          id,
+          properties: {
+            id,
+            name,
+            risk: risk || "low",
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [ring],
+          },
+        };
+        return [...others, feature];
+      });
     });
 
     // Heatmap
@@ -283,67 +285,54 @@ export default function MapComponent({
       setHeatmapFeatures(features);
     });
 
-    // Boundaries
+    // Boundaries (also use polygons for circle so size is map‑fixed)
     socket.on("boundary-update", (b: BoundaryUpdatePayload) => {
-      const { id, name, type, center, coords } = b;
+      const { id, name, type, center, coords, radius } = b;
+
+      let ring: [number, number][] | null = null;
 
       if (type === "circle" && center) {
         const { lat, lng } = center;
         if (typeof lat !== "number" || typeof lng !== "number") return;
-
-        setBoundaryFeatures((prev) => {
-          const others = prev.filter((f) => f.properties?.id !== id);
-          const feature = {
-            type: "Feature",
-            id,
-            properties: {
-              id,
-              name,
-              type: "circle",
-            },
-            geometry: {
-              type: "Point",
-              coordinates: [lng, lat],
-            },
-          };
-          return [...others, feature];
-        });
+        const r = typeof radius === "number" ? radius : 200;
+        ring = makeCircleRing({ lat, lng }, r);
       } else if (type === "polygon" && coords && coords.length) {
-        const ring = coords.map((c) => [c.lng, c.lat]);
+        const tmp = coords.map(
+          (c) => [c.lng, c.lat] as [number, number]
+        );
         if (
-          ring.length > 0 &&
-          (ring[0][0] !== ring[ring.length - 1][0] ||
-            ring[0][1] !== ring[ring.length - 1][1])
+          tmp.length > 0 &&
+          (tmp[0][0] !== tmp[tmp.length - 1][0] ||
+            tmp[0][1] !== tmp[tmp.length - 1][1])
         ) {
-          ring.push(ring[0]);
+          tmp.push(tmp[0]);
         }
-
-        setBoundaryFeatures((prev) => {
-          const others = prev.filter((f) => f.properties?.id !== id);
-          const feature = {
-            type: "Feature",
-            id,
-            properties: {
-              id,
-              name,
-              type: "polygon",
-            },
-            geometry: {
-              type: "Polygon",
-              coordinates: [ring],
-            },
-          };
-          return [...others, feature];
-        });
+        ring = tmp;
       }
+
+      if (!ring) return;
+
+      setBoundaryFeatures((prev) => {
+        const others = prev.filter((f) => f.properties?.id !== id);
+        const feature = {
+          type: "Feature",
+          id,
+          properties: {
+            id,
+            name,
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [ring],
+          },
+        };
+        return [...others, feature];
+      });
     });
 
-    // Zone alerts (with repeating reminder)
+    // Zone alerts
     socket.on("zone-alert", ({ touristId, zoneName, risk }: any) => {
       const myTid = touristRef.current?.tid || null;
-      // Note: web version currently does *not* filter by tid (commented out),
-      // so all alerts are shown. That behavior is preserved here.
-
       const zoneKey = `${myTid || "unknown"}_${zoneName}`;
 
       onGeofenceAlert?.({ type: "zone", name: zoneName, risk });
@@ -360,7 +349,7 @@ export default function MapComponent({
       }
     });
 
-    // Outside boundary alerts (stop zone reminders + one-shot alert)
+    // Outside boundary alerts
     socket.on("outside-boundary-alert", (data: any) => {
       const myTid = touristRef.current?.tid || null;
       if (data.touristId && myTid && data.touristId !== myTid) return;
@@ -385,7 +374,7 @@ export default function MapComponent({
     };
   }, [onGeofenceAlert]);
 
-  // Location tracking → send live-tourist-data
+  // Location tracking + heartbeat (emits but does NOT move camera) [web:74]
   useEffect(() => {
     let isMounted = true;
 
@@ -404,7 +393,7 @@ export default function MapComponent({
 
         const sub = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.Highest,
+            accuracy: Location.Accuracy.High,
             timeInterval: 5000,
             distanceInterval: 5,
           },
@@ -436,7 +425,6 @@ export default function MapComponent({
             };
 
             console.log("📡 live-tourist-data", payload);
-
             socketRef.current?.emit("live-tourist-data", payload);
           }
         );
@@ -451,37 +439,56 @@ export default function MapComponent({
 
     startLocation();
 
+    heartbeatRef.current = setInterval(async () => {
+      if (!currentLocation) return;
+      const p: any = personalRef.current;
+      const t: any = touristRef.current;
+
+      const storedTid = await AsyncStorage.getItem("current_tid");
+      const touristId = t?.tid || storedTid || null;
+
+      const payload = {
+        latitude: currentLocation.lat,
+        longitude: currentLocation.lng,
+        timestamp: new Date().toISOString(),
+        touristId,
+        personalId: p?.pid_personal_id,
+        name: p?.pid_full_name || "Unknown",
+        phone: p?.pid_mobile || "-",
+        email: p?.pid_email || "-",
+        nationality: p?.pid_nationality || "-",
+        destination: t?.trip?.destination || "-",
+        tripStart: t?.trip?.startDate || "-",
+        tripEnd: t?.trip?.endDate || "-",
+        status: t?.tid_status || "active",
+      };
+
+      console.log("❤️ heartbeat live-tourist-data", payload);
+      socketRef.current?.emit("live-tourist-data", payload);
+    }, 5000);
+
     return () => {
       isMounted = false;
       if (locationSubRef.current) {
         locationSubRef.current.remove();
         locationSubRef.current = null;
       }
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
     };
-  }, []);
+  }, [currentLocation]);
 
-  // Camera initial center
-  const initialCenter: [number, number] =
-    currentLocation && !requestingLocation
-      ? [currentLocation.lng, currentLocation.lat]
-      : DEFAULT_CENTER;
+  // Map starts at a fixed center; camera only moves on button tap
+  const initialCenter: [number, number] = DEFAULT_CENTER;
+  const initialZoom = DEFAULT_ZOOM;
 
-  const initialZoom = currentLocation ? 13 : 5;
-
-  // Layer styles
   const touristsCircleStyle = {
     circleRadius: 4,
     circleColor: "#2563eb",
     circleStrokeWidth: 1,
     circleStrokeColor: "#ffffff",
-  };
-
-  const zoneCircleStyle = {
-    circleRadius: 18,
-    circleColor: "#f97316",
-    circleOpacity: 0.3,
-    circleStrokeColor: "#f97316",
-    circleStrokeWidth: 2,
   };
 
   const zonePolygonStyle = {
@@ -501,15 +508,59 @@ export default function MapComponent({
     heatmapOpacity: 0.9,
   };
 
+  // Zoom only when user presses the button
+  const handleRecenter = async () => {
+    try {
+      let loc = currentLocation;
+
+      if (!loc) {
+        const perm = await Location.getForegroundPermissionsAsync();
+        if (!perm.granted) {
+          const { status } =
+            await Location.requestForegroundPermissionsAsync();
+          if (status !== "granted") {
+            Alert.alert(
+              "Location permission",
+              "Cannot center map without location permission."
+            );
+            return;
+          }
+        }
+
+        const result = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        loc = {
+          lat: result.coords.latitude,
+          lng: result.coords.longitude,
+        };
+        setCurrentLocation(loc);
+      }
+
+      if (!cameraRef.current || !loc) return;
+
+      cameraRef.current.setCamera({
+        centerCoordinate: [loc.lng, loc.lat],
+        zoomLevel: 14.5, // ~1–2 km radius view
+        animationMode: "flyTo",
+        animationDuration: 800,
+      });
+    } catch (e) {
+      console.log("❌ recenter error", e);
+      Alert.alert("Location error", "Could not center on your location.");
+    }
+  };
+
   return (
     <View style={styles.root}>
-  <MapLibreGL.MapView
-    style={styles.map}
-    mapStyle={`https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`}
-    logoEnabled={false}
-    attributionEnabled={true}
-  >
+      <MapLibreGL.MapView
+        style={styles.map}
+        mapStyle={`https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`}
+        logoEnabled={false}
+        attributionEnabled
+      >
         <MapLibreGL.Camera
+          ref={cameraRef}
           defaultSettings={{
             centerCoordinate: initialCenter,
             zoomLevel: initialZoom,
@@ -532,23 +583,7 @@ export default function MapComponent({
           </MapLibreGL.ShapeSource>
         )}
 
-        {/* Zones: circles */}
-        {zoneCircleFeatures.length > 0 && (
-          <MapLibreGL.ShapeSource
-            id="zones-circle-source"
-            shape={{
-              type: "FeatureCollection",
-              features: zoneCircleFeatures,
-            }}
-          >
-            <MapLibreGL.CircleLayer
-              id="zones-circle-layer"
-              style={zoneCircleStyle}
-            />
-          </MapLibreGL.ShapeSource>
-        )}
-
-        {/* Zones: polygons */}
+        {/* Zones as polygons (circle+polygon in meters) */}
         {zonePolygonFeatures.length > 0 && (
           <MapLibreGL.ShapeSource
             id="zones-polygon-source"
@@ -564,7 +599,7 @@ export default function MapComponent({
           </MapLibreGL.ShapeSource>
         )}
 
-        {/* Boundaries */}
+        {/* Boundaries as polygons */}
         {boundaryFeatures.length > 0 && (
           <MapLibreGL.ShapeSource
             id="boundaries-source"
@@ -605,6 +640,11 @@ export default function MapComponent({
           <Text style={styles.fullscreenButtonText}>Exit Fullscreen</Text>
         </Pressable>
       )}
+
+      {/* My location button */}
+      <Pressable style={styles.locateButton} onPress={handleRecenter}>
+        <Text style={styles.locateButtonText}>◎</Text>
+      </Pressable>
 
       {/* Zone alert modal */}
       <Modal
@@ -661,9 +701,7 @@ export default function MapComponent({
             <Text style={styles.alertTitle}>🚨 Boundary Alert</Text>
             <Text style={styles.alertMessage}>
               You went outside allowed boundary:{" "}
-              <Text style={styles.alertHighlight}>
-                {boundaryAlertName}
-              </Text>
+              <Text style={styles.alertHighlight}>{boundaryAlertName}</Text>
             </Text>
             <Pressable
               style={styles.alertButton}
@@ -679,12 +717,8 @@ export default function MapComponent({
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  },
+  root: { flex: 1 },
+  map: { flex: 1 },
   fullscreenButton: {
     position: "absolute",
     top: 16,
@@ -698,6 +732,22 @@ const styles = StyleSheet.create({
   fullscreenButtonText: {
     fontSize: 12,
     fontWeight: "600",
+    color: "#111827",
+  },
+  locateButton: {
+    position: "absolute",
+    bottom: 24,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+  },
+  locateButtonText: {
+    fontSize: 20,
     color: "#111827",
   },
   modalOverlay: {
