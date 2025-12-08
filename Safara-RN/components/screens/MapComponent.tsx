@@ -16,7 +16,8 @@ import { io, Socket } from "socket.io-client";
 
 import { useUserData } from "@/context/UserDataContext";
 
-const SOCKET_URL = "http://192.168.0.106:3000";
+//const SOCKET_URL = "http://192.168.0.106:3000";
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_API_URL;
 const MAPTILER_KEY = "K183PqmMToR2O89INJ40";
 
 MapLibreGL.setAccessToken(null);
@@ -161,7 +162,10 @@ export default function MapComponent({
       console.log("🛰️ Map socket connected", socket.id);
       const p: any = personalRef.current;
       const t: any = touristRef.current;
-
+     console.log(personalRef.current);
+     console.log( touristRef.current);
+     
+     
       const storedTid = await AsyncStorage.getItem("current_tid");
       const touristId = t?.tid || storedTid || null;
 

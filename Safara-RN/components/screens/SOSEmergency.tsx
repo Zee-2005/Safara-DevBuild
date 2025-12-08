@@ -225,12 +225,26 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
           ? { lat: userLocation.lat, lng: userLocation.lng }
           : undefined);
 
-      const touristId =
-        t?.id ||
-        (await AsyncStorage.getItem("current_tid")) ||
-        (await AsyncStorage.getItem("tourist_id")) ||
-        touristRecord?.id ||
-        undefined;
+      // const touristId =
+      //   t?.id ||
+      //   (await AsyncStorage.getItem("current_tid")) ||
+      //   (await AsyncStorage.getItem("tourist_id")) ||
+      //  // touristRecord?.id ||
+      //   undefined;
+        // ✅ 5 LINES - Gets MOST RECENT tourist_id
+const keys = await AsyncStorage.getAllKeys();
+const touristKeys = keys.filter(key => key.startsWith('tourist_id:'));
+let touristId = null;
+
+if (touristKeys.length > 0) {
+  const latestKey = touristKeys[0];
+  const data = await AsyncStorage.getItem(latestKey);
+  touristId = data ? JSON.parse(data).id : null;
+}
+
+console.log("✅ TOURIST ID:", touristId);
+
+console.log(touristId);
 
       const touristName = p?.pid_full_name || storedFullName || "Unknown";
       const touristPhone = p?.pid_mobile || storedMobile || "-";

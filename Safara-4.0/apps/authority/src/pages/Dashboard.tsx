@@ -174,7 +174,7 @@ const [uiAlerts, setUiAlerts] = useState<any[]>([]);
     map.addControl(drawControl);
 
     // Socket
-    const SOCKET_URL = (import.meta as any).env?.VITE_AUTHORITY_SOCKET_URL || "http://localhost:3000";
+    const SOCKET_URL = (import.meta as any).env?.VITE_AUTHORITY_SOCKET_URL || "http://localhost:3000" || 'http://10.0.12.219:3000';
    // const SOCKET_URL="http://localhost:3000";
     socketRef.current = io(SOCKET_URL, {
       transports: ["websocket", "polling"],

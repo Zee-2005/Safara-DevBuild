@@ -11,6 +11,11 @@ import authRoutes from './routes/auths.routes.js';
  import uploadRoutes from './routes/upload.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import {router} from './modules/tourist/tourist.routes.js';
+// src/app.ts
+import { incidentRouter } from './modules/incident/incident.routes.js';
+
+
+
 
 import { fileURLToPath } from 'url';
 
@@ -20,7 +25,7 @@ export const buildApp = () => {
   app.set('trust proxy', true);
  // app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000','http://10.0.12.219:5173'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -37,7 +42,7 @@ const __dirname = path.dirname(__filename);
   app.use('/api/v1/upload', uploadRoutes);
   app.use('/api/tourist', router);
   app.use('/api', api);
-
+app.use('/api/incidents', incidentRouter);
 
   // ... previous middleware and routes
 app.use((_req, res) => res.status(404).json({ error: 'Not Found' }));

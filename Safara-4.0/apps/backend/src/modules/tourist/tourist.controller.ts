@@ -199,6 +199,7 @@ export const getTouristByTid = async (req: Request, res: Response) => {
     // Prepare data to send in response
     const responseData = {
       tid: tourist.tid,
+       userId: tourist.userId,
       holderPid: tourist.holderPid,
       destination: tourist.destination,
       status: tourist.status,

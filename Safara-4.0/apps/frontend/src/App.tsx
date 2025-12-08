@@ -31,7 +31,7 @@ import MapComponent from '@/components/MapComponent';
 import GuideChatbot from '@/components/GuideChatbot';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import PersonalIdDetails from '@/components/PersonalIdDetails';
-
+import TouristPublicView from '@/components/TouristPublicView';
 // NEW trip planning pages
 import PlanTripHub from '@/components/PlanTripHub';
 import AgencyBrowse from '@/components/AgencyBrowse';
@@ -388,6 +388,11 @@ function Router() {
           </div>
         </div>
       </Route>
+
+      <Route path="/tourist/:tid">
+  {(params) => <TouristPublicView tid={params.tid} />}
+</Route>
+
 
       <Route path="/qr-code">
         <div className="min-h-screen bg-background">

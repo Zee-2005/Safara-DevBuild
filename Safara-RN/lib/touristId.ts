@@ -63,9 +63,9 @@ export async function saveTouristIdFromDraft(
     .toString(36)
     .slice(2, 8)
     .toUpperCase()}`;
+console.log(id);
 
   const status = computeStatus(start, end);
-
   const rec: TouristIdRecord = {
     id,
     holderPid: pidApplicationId,

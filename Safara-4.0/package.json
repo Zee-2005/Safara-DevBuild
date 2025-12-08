@@ -24,6 +24,7 @@
     "cors": "^2.8.5",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
+    "qrcode.react": "^4.2.0",
     "sonner": "^2.0.7"
   }
 }

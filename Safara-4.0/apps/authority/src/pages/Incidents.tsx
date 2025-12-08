@@ -99,6 +99,25 @@ const [efirIncident, setEfirIncident] = useState<any>(null);
     }
   }, [ctxIncidents]);
 
+  useEffect(() => {
+  fetch('http://localhost:3000/api/incidents')
+    .then((r) => r.json())
+    .then((data) => {
+      // data is array of incidents from Mongo
+      setIncidents(data);
+    });
+}, []);
+
+const API_BASE = "http://localhost:3000";
+
+const handleDeleteIncident = async (id: string) => {
+  await fetch(`${API_BASE}/api/incidents/${id}`, {
+    method: "DELETE",
+  });
+  setIncidents((prev) => prev.filter((i: any) => i._id !== id && i.id !== id));
+};
+
+
   // Helper: find tourist data referenced by an incident
   // const findTouristFromIncident = (inc: any) => {
   //   // try direct fields first
@@ -614,6 +633,18 @@ ${incidents.length ? incidents.map(i => `• ${i.type} (${i.status})`).join("\n"
                   <Button variant="outline" className="w-full" onClick={() => handleLocate(selectedIncident)}>
                     <MapPin className="w-4 h-4 mr-2" /> Track Location
                   </Button>
+<Button
+  variant="outline"
+  size="sm"
+  onClick={(e) => {
+    e.stopPropagation();
+    handleDeleteIncident(selectedIncident._id || selectedIncident.id);
+  }}
+>
+  Delete
+</Button>
+
+
 
                   {selectedIncident.status !== "resolved" ? (
                     <Button variant="outline" className="w-full text-success border-success" onClick={() => toggleResolved(selectedIncident.id)}>
