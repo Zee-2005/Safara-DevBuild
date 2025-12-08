@@ -636,6 +636,7 @@ ${incidents.length ? incidents.map(i => `• ${i.type} (${i.status})`).join("\n"
 <Button
   variant="outline"
   size="sm"
+  className="w-full" 
   onClick={(e) => {
     e.stopPropagation();
     handleDeleteIncident(selectedIncident._id || selectedIncident.id);

@@ -209,11 +209,13 @@
 //  start();
 
 // src/server.ts
+// src/server.ts
 import { env } from './config/env.js';
 import { buildApp } from './app.js';
 import { connectMongo, disconnectMongo } from './db/mongoose.js';
 import { Server as SocketIOServer } from 'socket.io';
-import { IncidentModel } from './modules/incident/incident.model.js'; // <-- your TS/Mongoose model [web:17]
+import { IncidentModel } from './modules/incident/incident.model.js';
+import { TouristModel } from './modules/authTourist/tourist.model.js';
 
 const start = async () => {
   await connectMongo();
@@ -263,7 +265,7 @@ const start = async () => {
   const incidents = new Map<string, Incident>();
   const insideZonesBySocket = new Map<string, Set<string>>();
   const boundaryInsideBySocket = new Map<string, boolean>();
-  const activeTourists = new Map<string, any>(); // store last known tourist location
+  const activeTourists = new Map<string, any>();
 
   const haversine = (a: LatLng, b: LatLng) => {
     const toRad = (x: number) => (x * Math.PI) / 180;
@@ -293,8 +295,7 @@ const start = async () => {
     return inside;
   };
 
-  // Optional: simple REST endpoint FROM THIS FILE to get all incidents from DB
-  // (You already have structured routers, but this is here if you call server.ts alone.) [web:18]
+  // Simple REST endpoint to fetch all incidents from DB
   app.get('/api/incidents', async (_req, res, next) => {
     try {
       const list = await IncidentModel.find().sort({ createdAt: -1 }).lean();
@@ -307,12 +308,12 @@ const start = async () => {
   io.on('connection', (socket) => {
     console.log('Client connected', socket.id);
 
-    // Sync existing zones & boundaries
+    // Sync existing zones & boundaries (in-memory)
     for (const z of zones.values()) socket.emit('zone-update', z);
     for (const b of boundaries.values()) socket.emit('boundary-update', b);
 
-    // --- 1) Tourist live data (unchanged live logic) ---
-    socket.on('live-tourist-data', (data: any) => {
+    // --- 1) Tourist live data (merged logic + DB upsert) ---
+    socket.on('live-tourist-data', async (data: any) => {
       const {
         latitude,
         longitude,
@@ -328,7 +329,7 @@ const start = async () => {
         status,
       } = data;
 
-      // Broadcast to authority/dashboard (live data)
+      // Broadcast live location to authority/dashboard
       io.emit('receive-location', {
         socketId: socket.id,
         touristId,
@@ -346,6 +347,7 @@ const start = async () => {
         timestamp: data.timestamp || Date.now(),
       });
 
+      // Store last known data in memory
       activeTourists.set(socket.id, {
         ...data,
         socketId: socket.id,
@@ -356,7 +358,30 @@ const start = async () => {
         socket.emit('active-tourist-list', Array.from(activeTourists.values()));
       });
 
-      // --- Geofence checks (unchanged) ---
+      // Persist/update tourist in MongoDB
+      try {
+        await TouristModel.findOneAndUpdate(
+          { socketId: socket.id },
+          {
+            socketId: socket.id,
+            tid: touristId,
+            personalId,
+            name,
+            email,
+            phone,
+            nationality,
+            latitude,
+            longitude,
+            status: status || 'active',
+            lastSeenAt: new Date(),
+          },
+          { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+      } catch (err) {
+        console.error('Error upserting tourist:', err);
+      }
+
+      // Geofence checks (unchanged logic)
       const here: LatLng = { lat: latitude, lng: longitude };
       const prevSet = insideZonesBySocket.get(socket.id) ?? new Set<string>();
       const nextSet = new Set<string>();
@@ -385,7 +410,7 @@ const start = async () => {
       }
       insideZonesBySocket.set(socket.id, nextSet);
 
-      // Boundaries
+      // Boundary checks (unchanged)
       let insideAnyBoundary = boundaries.size === 0 ? true : false;
       if (boundaries.size > 0) {
         insideAnyBoundary = false;
@@ -410,10 +435,8 @@ const start = async () => {
           });
       }
       boundaryInsideBySocket.set(socket.id, insideAnyBoundary);
-    });
 
-    // Extra debug listener (kept from original)
-    socket.on('live-tourist-data', (data) => {
+      // Extra debug log preserved
       console.log('🔥 Received from Tourist:', data);
     });
 
@@ -422,14 +445,17 @@ const start = async () => {
       zones.set(z.id, z);
       io.emit('zone-update', z);
     });
+
     socket.on('zone-deleted', ({ id }) => {
       zones.delete(id);
       io.emit('zone-deleted', { id });
     });
+
     socket.on('boundary-update', (b: Boundary) => {
       boundaries.set(b.id, b);
       io.emit('boundary-update', b);
     });
+
     socket.on('boundary-deleted', ({ id }) => {
       boundaries.delete(id);
       io.emit('boundary-deleted', { id });
@@ -440,13 +466,12 @@ const start = async () => {
       io.emit('heatmap-update', points)
     );
 
-    // --- Incidents/SOS WITH DB PERSISTENCE ---
+    // --- Incidents/SOS with DB persistence ---
     socket.on('sos-create', async (payload: Partial<Incident>) => {
       const id =
         payload.id ||
         `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      // Original in-memory object (kept so live behavior remains)
       const incident: Incident = {
         id,
         touristSocketId: socket.id,
@@ -461,40 +486,46 @@ const start = async () => {
       };
       incidents.set(incident.id, incident);
 
-      // NEW: Save to MongoDB using IncidentModel [web:21][web:25]
-      const mongoDoc = await IncidentModel.create({
-        socketId: socket.id,
-        touristId: payload.touristId,
-        touristName: payload.touristName,
-        touristPhone: payload.touristPhone,
-        location: payload.location
-          ? { lat: payload.location.lat, lng: payload.location.lng }
-          : undefined,
-        description: payload.description,
-        media: payload.media,
-        status: 'new',
-        severity: (payload as any).severity || 'high',
-        timeline: [
-          {
-            event: 'SOS created',
-            time: new Date().toISOString(),
-            user: payload.touristName || 'Tourist',
-          },
-        ],
-      });
+      try {
+        const mongoDoc = await IncidentModel.create({
+          socketId: socket.id,
+          touristId: payload.touristId,
+          touristName: payload.touristName,
+          touristPhone: payload.touristPhone,
+          location: payload.location
+            ? { lat: payload.location.lat, lng: payload.location.lng }
+            : undefined,
+          description: payload.description,
+          media: payload.media,
+          status: 'new',
+          severity: (payload as any).severity || 'high',
+          timeline: [
+            {
+              event: 'SOS created',
+              time: new Date().toISOString(),
+              user: payload.touristName || 'Tourist',
+            },
+          ],
+        });
 
-      const incidentForClients = {
-        ...incident,
-        // expose DB id so React can use it if needed
-        dbId: mongoDoc._id.toString(),
-      };
+        const incidentForClients = {
+          ...incident,
+          dbId: mongoDoc._id.toString(),
+        };
 
-      io.emit('incident-new', incidentForClients);
-      socket.emit('sos-received', { id: incident.id, dbId: mongoDoc._id.toString() });
+        io.emit('incident-new', incidentForClients);
+        socket.emit('sos-received', {
+          id: incident.id,
+          dbId: mongoDoc._id.toString(),
+        });
+      } catch (err) {
+        console.error('Error saving incident:', err);
+        io.emit('incident-new', incident);
+        socket.emit('sos-received', { id: incident.id });
+      }
     });
 
     socket.on('incident-ack', async ({ id, officer }) => {
-      // keep original in-memory logic
       const inc = incidents.get(id);
       if (inc) {
         inc.status = 'acknowledged';
@@ -502,28 +533,28 @@ const start = async () => {
         incidents.set(id, inc);
       }
 
-      // NEW: update in MongoDB too [web:21][web:28]
-      await IncidentModel.updateOne(
-        { socketId: inc?.touristSocketId, description: inc?.description },
-        {
-          $set: {
-            status: 'acknowledged',
-          },
-          $push: {
-            timeline: {
-              event: 'Incident acknowledged',
-              time: new Date().toISOString(),
-              user: officer?.name || 'Officer',
+      try {
+        await IncidentModel.updateOne(
+          { socketId: inc?.touristSocketId, description: inc?.description },
+          {
+            $set: { status: 'acknowledged' },
+            $push: {
+              timeline: {
+                event: 'Incident acknowledged',
+                time: new Date().toISOString(),
+                user: officer?.name || 'Officer',
+              },
             },
-          },
-        }
-      );
+          }
+        );
+      } catch (err) {
+        console.error('Error updating incident (ack):', err);
+      }
 
       if (inc) io.emit('incident-updated', inc);
     });
 
     socket.on('incident-resolve', async ({ id, notes }) => {
-      // keep original in-memory logic
       const inc = incidents.get(id);
       if (inc) {
         inc.status = 'resolved';
@@ -531,23 +562,23 @@ const start = async () => {
         incidents.set(id, inc);
       }
 
-      // NEW: update in MongoDB too
-      await IncidentModel.updateOne(
-        { socketId: inc?.touristSocketId, description: inc?.description },
-        {
-          $set: {
-            status: 'resolved',
-            notes,
-          },
-          $push: {
-            timeline: {
-              event: 'Incident resolved',
-              time: new Date().toISOString(),
-              user: 'Officer',
+      try {
+        await IncidentModel.updateOne(
+          { socketId: inc?.touristSocketId, description: inc?.description },
+          {
+            $set: { status: 'resolved', notes },
+            $push: {
+              timeline: {
+                event: 'Incident resolved',
+                time: new Date().toISOString(),
+                user: 'Officer',
+              },
             },
-          },
-        }
-      );
+          }
+        );
+      } catch (err) {
+        console.error('Error updating incident (resolve):', err);
+      }
 
       if (inc) io.emit('incident-updated', inc);
     });
