@@ -162,7 +162,7 @@ export default function MapComponent({
       console.log("🛰️ Map socket connected", socket.id);
       const p: any = personalRef.current;
       const t: any = touristRef.current;
-     console.log(personalRef.current);
+     console.log(p);
      console.log( touristRef.current);
      
      
@@ -406,27 +406,74 @@ export default function MapComponent({
             const { latitude, longitude } = loc.coords;
             setCurrentLocation({ lat: latitude, lng: longitude });
 
-            const p: any = personalRef.current;
-            const t: any = touristRef.current;
+            // const p: any = personalRef.current;
+            // const t: any = touristRef.current;
 
-            const storedTid = await AsyncStorage.getItem("current_tid");
-            const touristId = t?.tid || storedTid || null;
+            // const storedTid = await AsyncStorage.getItem("current_tid");
+            // const touristId = t?.tid || storedTid || null;
 
-            const payload = {
-              latitude,
-              longitude,
-              timestamp: new Date().toISOString(),
-              touristId,
-              personalId: p?.pid_personal_id,
-              name: p?.pid_full_name || "Unknown",
-              phone: p?.pid_mobile || "-",
-              email: p?.pid_email || "-",
-              nationality: p?.pid_nationality || "-",
-              destination: t?.trip?.destination || "-",
-              tripStart: t?.trip?.startDate || "-",
-              tripEnd: t?.trip?.endDate || "-",
-              status: t?.tid_status || "active",
-            };
+            // const payload = {
+            //   latitude,
+            //   longitude,
+            //   timestamp: new Date().toISOString(),
+            //   touristId,
+            //   personalId: p?.pid_personal_id,
+            //   name: p?.pid_full_name || "Unknown",
+            //   phone: p?.pid_mobile || "-",
+            //   email: p?.pid_email || "-",
+            //   nationality: p?.pid_nationality || "-",
+            //   destination: t?.trip?.destination || "-",
+            //   tripStart: t?.trip?.startDate || "-",
+            //   tripEnd: t?.trip?.endDate || "-",
+            //   status: t?.tid_status || "active",
+            // };
+
+             const storedFullName =
+        (await AsyncStorage.getItem("pid_full_name")) || "Demo Tourist";
+      const storedMobile =
+        (await AsyncStorage.getItem("pid_mobile")) || "+911234567890";
+
+      const p: any = personalRef.current;
+      const t: any = touristRef.current;
+
+      // const touristId =
+ 
+const keys = await AsyncStorage.getAllKeys();
+const touristKeys = keys.filter(key => key.startsWith('tourist_id:'));
+let touristId = null;
+
+if (touristKeys.length > 0) {
+  const latestKey = touristKeys[0];
+  const data = await AsyncStorage.getItem(latestKey);
+  touristId = data ? JSON.parse(data).id : null;
+}
+
+console.log("✅ TOURIST ID:", touristId);
+
+console.log(touristId);
+
+      const touristName = p?.pid_full_name || storedFullName || "Unknown";
+      const touristPhone = p?.pid_mobile || storedMobile || "-";
+
+      const isDemo = !(await AsyncStorage.getItem("t_id"));
+
+      const payload: any = {
+        touristId,
+        latitude,
+        longitude,     
+        personalId: p?.pid_personal_id ||  (await AsyncStorage.getItem("pid_personal_id")),
+        name:  p?.pid_full_name || storedFullName || "Unknown",
+        phone: p?.pid_mobile || storedMobile || "-",
+        email: p?.pid_email || (await AsyncStorage.getItem("pid_email")),
+        nationality: p?.pid_nationality || "-",
+        destination: t?.trip?.destination || "-",
+        tripStart: t?.trip?.startDate || (await AsyncStorage.getItem("trip_start"))|| (await AsyncStorage.getItem("trip_start_now"))|| (await AsyncStorage.getItem("tourist_id_start")),
+        tripEnd: t?.trip?.endDate || (await AsyncStorage.getItem("trip_end")) || (await AsyncStorage.getItem("tourist_id_end")),
+        status: t?.tid_status || (await AsyncStorage.getItem("current_tid_status")) ||"active" ,
+       
+      };
+
+    
 
             console.log("📡 live-tourist-data", payload);
             socketRef.current?.emit("live-tourist-data", payload);
@@ -447,6 +494,7 @@ export default function MapComponent({
       if (!currentLocation) return;
       const p: any = personalRef.current;
       const t: any = touristRef.current;
+console.log(p.pid_application_id);
 
       const storedTid = await AsyncStorage.getItem("current_tid");
       const touristId = t?.tid || storedTid || null;

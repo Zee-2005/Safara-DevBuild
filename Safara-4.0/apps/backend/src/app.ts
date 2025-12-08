@@ -16,7 +16,6 @@ import { incidentRouter } from './modules/incident/incident.routes.js';
 
 import { touristRouter } from './modules/authTourist/tourist.routes.js';
 
-import { zoneRouter } from './modules/zone/zone.routes.js';
 
 
 
@@ -50,7 +49,6 @@ const __dirname = path.dirname(__filename);
   app.use('/api', api);
 app.use('/api/incidents', incidentRouter);
 app.use('/api/tourists', touristRouter);
-app.use('/api/zones', zoneRouter);
 
 
   // ... previous middleware and routes

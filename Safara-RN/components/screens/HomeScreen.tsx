@@ -24,6 +24,7 @@ import ActivatedTourMode, {
   TouristId,
 } from "./ActivatedTourMode";
 import SOSEmergency from "./SOSEmergency";
+import AiAssistant from "./AiAssistant";
 import { getMyTrips } from "../../lib/tourist.service";
 
 interface HomeScreenProps {
@@ -558,8 +559,29 @@ export default function HomeScreen({
           onLogout={onLogout || (() => {})}
         />
       )}
-      {viewMode === "chat" &&
-        renderPlaceholder("Chatbot", "Smart travel assistant coming soon.")}
+      {viewMode === "chat" && (
+  <AiAssistant
+    user={{
+      full_name: userPhone || userEmail || "Traveller",
+      email: userEmail || "unknown@safara.app",
+      points: 0,
+    }}
+    currentTrip={
+      activeTrip
+        ? {
+            title: activeTrip.destination || "Current trip",
+            destination: activeTrip.destination || "Unknown",
+            start_date: activeTrip.startDate,
+            end_date: activeTrip.endDate,
+            status: activeTrip.status,
+            budget: undefined,
+            spent: undefined,
+          }
+        : null
+    }
+  />
+)}
+
       {viewMode === "community" &&
         renderPlaceholder(
           "Community & Alerts",

@@ -21,6 +21,7 @@ const navigation = [
   { name: 'Incidents & SOS', href: '/incidents', icon: AlertTriangle },
   { name: 'Zone Management', href: '/zones', icon: MapPin },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Predictive Analysis', href: '/predictive', icon: MessageSquare },
   { name: 'AI Assistant', href: '/assistant', icon: MessageSquare },
   { name: 'EFIR', href: '/efir', icon: MessageSquare },
   { name: 'Settings', href: '/settings', icon: Settings },
@@ -75,10 +76,10 @@ const Sidebar = () => {
             key={item.name}
             to={item.href}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white ${
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white'
+                  ? 'bg-gray'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-black'
               }`
             }
           >

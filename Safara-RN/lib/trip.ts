@@ -148,8 +148,8 @@ export async function readTripDraft(userKey?: string): Promise<TripDraft> {
  * - New usage (preferred): clearTripDraft(userKey)
  * - Old usage (still supported): clearTripDraft()
 //  */
-// export async function clearTripDraft(userKey?: string): Promise<void> {
-//   await Promise.all(
-//     KEYS.map((base) => AsyncStorage.removeItem(k(base, userKey)))
-//   );
-// }
+export async function clearTripDraft(userKey?: string): Promise<void> {
+  await Promise.all(
+    KEYS.map((base) => AsyncStorage.removeItem(k(base, userKey)))
+  );
+}

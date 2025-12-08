@@ -17,7 +17,7 @@ import Assistant from "./pages/Assistant";
 import Settings from "./pages/Settings";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
-
+import PredictiveAnalysis from "./pages/PredictiveAnalysis";
 // Protected wrapper
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 //   const auth = localStorage.getItem('sentinelview_auth');
@@ -60,6 +60,7 @@ const App = () => (
             <Route path="zones" element={<Zones />} />
             <Route path="efir" element={<EFIR />} />
             <Route path="analytics" element={<Analytics />} />
+             <Route path="predictive" element={<PredictiveAnalysis />} />
             <Route path="assistant" element={<Assistant />} />
             <Route path="settings" element={<Settings />} />
           </Route>
@@ -73,3 +74,4 @@ const App = () => (
 );
 
 export default App;
+
