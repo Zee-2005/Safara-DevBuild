@@ -157,6 +157,10 @@ export default function MapComponent({
     });
 
     socketRef.current = socket;
+socket.on("heatmap-update", (points: HeatmapPoint[]) => {
+  console.log("🔥 tourist heatmap-update", points.length, points);
+  // existing mapping code...
+});
 
     socket.on("connect", async () => {
       console.log("🛰️ Map socket connected", socket.id);
@@ -447,7 +451,11 @@ if (touristKeys.length > 0) {
   const data = await AsyncStorage.getItem(latestKey);
   touristId = data ? JSON.parse(data).id : null;
 }
-
+ const location: LatLng | undefined =
+        currentLocation ||
+        (userLocation
+          ? { lat: userLocation.lat, lng: userLocation.lng }
+          : undefined);
 console.log("✅ TOURIST ID:", touristId);
 
 console.log(touristId);
@@ -459,6 +467,7 @@ console.log(touristId);
 
       const payload: any = {
         touristId,
+        location,
         latitude,
         longitude,     
         personalId: p?.pid_personal_id ||  (await AsyncStorage.getItem("pid_personal_id")),
@@ -550,15 +559,35 @@ console.log(p.pid_application_id);
   };
 
   const boundaryStyle = {
-    fillColor: "#3b82f6",
+    fillColor: "#f5f6f9ff",
     fillOpacity: 0.12,
-    fillOutlineColor: "#3b82f6",
+    fillOutlineColor: "#02050aff",
   };
+const heatmapStyle = {
+  heatmapRadius: [
+    "interpolate",
+    ["linear"],
+    ["zoom"],
+    5, 12,
+    10, 24,
+    14, 40,
+  ],
+  
+  heatmapOpacity: 0.7,
+  heatmapIntensity: 1,
 
-  const heatmapStyle = {
-    heatmapRadius: 24,
-    heatmapOpacity: 0.9,
-  };
+  // gradient: low → high
+  heatmapColor: [
+    "interpolate",
+    ["linear"],
+    ["heatmap-density"],
+    0, "rgba(0, 255, 0, 0)",    // transparent green
+    0.6, "rgba(1, 3, 1, 0.6)",
+    0.8, "rgba(255, 165, 0, 0.8)", // orange
+    1, "rgba(249, 249, 249, 0.49)"        // red
+  ],
+};
+
 
   // Zoom only when user presses the button
   const handleRecenter = async () => {

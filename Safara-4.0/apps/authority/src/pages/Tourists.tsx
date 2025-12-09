@@ -763,10 +763,10 @@ const Tourists: React.FC = () => {
                       </div>
 
                       <div className="flex flex-col gap-2 text-[15px] text-muted-foreground">
-                        <div className="flex items-center gap-2">
+                        {/* <div className="flex items-center gap-2">
                           <span className="font-medium">Personal ID:</span>
                           <span>{tourist.personalId || "-"}</span>
-                        </div>
+                        </div> */}
                         <div className="flex items-center gap-2">
                           <span className="font-medium">Phone:</span>
                           <span>{tourist.phone}</span>
@@ -841,7 +841,7 @@ const Tourists: React.FC = () => {
           {selectedTourist && (
             <div className="space-y-3">
               <p><strong>Name:</strong> {selectedTourist.name}</p>
-              <p><strong>ID:</strong> {selectedTourist.personalId}</p>
+              <p><strong>ID:</strong> {selectedTourist.id}</p>
               <p><strong>Nationality:</strong> {selectedTourist.nationality}</p>
               <p><strong>Email:</strong> {selectedTourist.email}</p>
               <p><strong>Phone:</strong> {selectedTourist.phone}</p>

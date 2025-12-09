@@ -16,6 +16,7 @@ import {
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import QRCodeDisplay from "./QRCodeDisplay";
+import ChildPortal from "./ChildPortal";
 
 export type TouristIdStatus = "active" | "expiring" | "expired";
 
@@ -36,7 +37,7 @@ interface ActivatedTourModeProps {
   onLogout: () => void;
 }
 
-type TourToolView = "list" | "verify-identity";
+type TourToolView = "list" | "verify-identity" | "child-portal";
 
 export default function ActivatedTourMode({
   touristId,
@@ -98,9 +99,9 @@ export default function ActivatedTourMode({
       color: "#6366f1",
     },
     {
-      id: "guide-chatbot",
-      title: "Guide Chatbot",
-      description: "Get local safety information",
+      id: "child-portal",
+      title: "Child Portal",
+      description: "Get emergency notifications for your child",
       icon: "message-circle" as const,
       color: "#eab308",
     },
@@ -132,6 +133,7 @@ export default function ActivatedTourMode({
 
   const showVerifyIdentity =
     toolView === "verify-identity" && isActive && touristId;
+  const showChildPortal = toolView === "child-portal";
 
   return (
     <View style={[styles.screen, { backgroundColor: bgScreen }]}>
@@ -183,16 +185,52 @@ export default function ActivatedTourMode({
           <View style={{ marginTop: 12 }}>
             <QRCodeDisplay
               touristId={{
-                id: touristId.id,
-                destination: touristId.destination,
-                validUntil: touristId.validUntil,
-                status: touristId.status,
-                holderName: touristId.holderName,
-                issueDate: touristId.issueDate,
+                id: touristId!.id,
+                destination: touristId!.destination,
+                validUntil: touristId!.validUntil,
+                status: touristId!.status,
+                holderName: touristId!.holderName,
+                issueDate: touristId!.issueDate,
               }}
             />
           </View>
         </ScrollView>
+      ) : showChildPortal ? (
+        <View style={{ flex: 1 }}>
+          <View
+            style={[
+              styles.childPortalHeader,
+              { backgroundColor: topBg, borderBottomColor: topBorder },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => setToolView("list")}
+              style={styles.backRow}
+            >
+              <Feather name="arrow-left" size={18} color={textMain} />
+              <Text style={[styles.backText, { color: textMain }]}>
+                Back to tour tools
+              </Text>
+            </TouchableOpacity>
+            <Text style={[styles.verifyTitle, { color: textMain }]}>
+              Child Portal
+            </Text>
+          </View>
+          <ChildPortal
+            theme={theme}
+            parentName={touristId?.holderName || "Guardian"}
+            parentPhone="Unknown"
+            parentEmail={undefined}
+            children={[]} // plug real children list from backend/context later
+            isChildSession={false}
+            onOpenMapForChild={() => {}}
+            onOpenDangerZones={() => {}}
+            onNavigateToContacts={() => onNavigate("personal-safety")}
+            onRequestLinkNewChild={() => onNavigate("family-circle")}
+            onToggleShareLocation={() => {}}
+            onToggleAutoSOSForward={() => {}}
+          />
+        </View>
       ) : (
         <ScrollView
           style={styles.content}
@@ -236,7 +274,9 @@ export default function ActivatedTourMode({
                 disabled={!isActive}
               >
                 <Text style={styles.sosText}>
-                  {isActive ? "SOS Emergency" : "SOS disabled (no active tour)"}
+                  {isActive
+                    ? "SOS Emergency"
+                    : "SOS disabled (no active tour)"}
                 </Text>
               </Button>
             </View>
@@ -254,11 +294,14 @@ export default function ActivatedTourMode({
             {features.map((feature) => {
               const disabled = !isActive;
               const isVerify = feature.id === "verify-identity";
+              const isChild = feature.id === "child-portal";
 
               const onPress = () => {
                 if (disabled) return;
                 if (isVerify) {
                   setToolView("verify-identity");
+                } else if (isChild) {
+                  setToolView("child-portal");
                 } else {
                   onNavigate(feature.id);
                 }
@@ -456,5 +499,13 @@ const styles = StyleSheet.create({
   verifyTitle: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  childPortalHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 });

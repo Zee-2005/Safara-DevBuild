@@ -33,6 +33,7 @@ interface Incident {
   touristId?: string;
   touristName?: string;
   touristPhone?: string;
+  touristEmail?: string;
   location?: { lat: number; lng: number };
   description?: string;
   media?: { audio?: string; video?: string; photo?: string };
@@ -1566,7 +1567,7 @@ function showZoneAlert(full: any) {
 
 
     <div style="font-size:14px; line-height:1.5; color:#333;">
-      <b>Personal ID:</b> ${full.personalId}<br/>
+ 
       <b>Name:</b> ${full.name}<br/>
       <b>Phone:</b> ${full.phone}<br/>
       <b>Email:</b> ${full.email}<br/>
@@ -1678,112 +1679,502 @@ function removeAlert(id) {
 
 
     // Draw handlers (create/edit/delete)
-    const onDrawCreated = (e: any) => {
-      const layer: L.Layer = e.layer;
-      const id = Date.now().toString();
+//     const onDrawCreated = (e: any) => {
+//       const layer: L.Layer = e.layer;
+//       const id = Date.now().toString();
 
 
-      const typeChoice = prompt("Enter Type (zone/boundary):", "zone");
-      if (!typeChoice) return;
-      const category = typeChoice.toLowerCase() === "boundary" ? "boundary" : "zone";
+//       const typeChoice = prompt("Enter Type (zone/boundary):", "zone");
+//       if (!typeChoice) return;
+//       const category = typeChoice.toLowerCase() === "boundary" ? "boundary" : "zone";
 
 
-      const data: any = { id, name: "", category, type: "", coords: null, radius: undefined, risk: undefined };
+//       const data: any = { id, name: "", category, type: "", coords: null, radius: undefined, risk: undefined };
 
 
-      if (category === "zone") {
-        const zoneName = prompt("Enter Zone Name:");
-        const riskLevel = (prompt("Enter Risk Level (Low/Medium/High):", "Low") || "Low").toLowerCase();
-        if (!zoneName) return;
-        data.name = zoneName;
-        data.risk = riskLevel;
+//       if (category === "zone") {
+//         const zoneName = prompt("Enter Zone Name:");
+//         const riskLevel = (prompt("Enter Risk Level (Low/Medium/High):", "Low") || "Low").toLowerCase();
+//         if (!zoneName) return;
+//         data.name = zoneName;
+//         data.risk = riskLevel;
 
 
-        const color = riskToColor(data.risk);
-        if (layer instanceof L.Circle) {
-          // circle zone
-          data.type = "circle";
-          const ll = (layer as L.Circle).getLatLng();
-          data.coords = { lat: ll.lat, lng: ll.lng };
-          data.radius = (layer as L.Circle).getRadius();
-          (layer as any).setStyle?.({ color, fillColor: color, fillOpacity: 0.4 });
-        } else {
-          // polygon zone
-          data.type = "polygon";
-          const latlngs = ((layer as L.Polygon).getLatLngs()[0] as L.LatLng[]).map((p) => ({ lat: p.lat, lng: p.lng }));
-          data.coords = latlngs;
-          (layer as any).setStyle?.({ color, fillColor: color, fillOpacity: 0.4 });
-        }
+//         const color = riskToColor(data.risk);
+//         if (layer instanceof L.Circle) {
+//           // circle zone
+//           data.type = "circle";
+//           const ll = (layer as L.Circle).getLatLng();
+//           data.coords = { lat: ll.lat, lng: ll.lng };
+//           data.radius = (layer as L.Circle).getRadius();
+//           (layer as any).setStyle?.({ color, fillColor: color, fillOpacity: 0.4 });
+//         } else {
+//           // polygon zone
+//           data.type = "polygon";
+//           const latlngs = ((layer as L.Polygon).getLatLngs()[0] as L.LatLng[]).map((p) => ({ lat: p.lat, lng: p.lng }));
+//           data.coords = latlngs;
+//           (layer as any).setStyle?.({ color, fillColor: color, fillOpacity: 0.4 });
+//         }
 
 
-        const popup = document.createElement("div");
-        popup.innerHTML = `<b>${data.name}</b><br/>Risk: ${data.risk}<br/>`;
-        const saveBtn = document.createElement("button");
-        saveBtn.textContent = "💾 Save Zone";
-        saveBtn.onclick = () => {
-          socket.emit("zone-update", data);
-          drawnItems.removeLayer(layer); // rely on server echo to re-add
-        };
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "🗑️ Delete Zone";
-        delBtn.onclick = () => {
-          socket.emit("zone-deleted", { id: data.id });
-          drawnItems.removeLayer(layer);
-        };
-        popup.appendChild(saveBtn);
-        popup.appendChild(document.createTextNode(" "));
-        popup.appendChild(delBtn);
-        (layer as any).bindPopup(popup).openPopup();
-      } else {
-        const boundaryName = prompt("Enter Boundary Name:");
-        if (!boundaryName) return;
-        data.name = boundaryName;
+//         const popup = document.createElement("div");
+//         popup.innerHTML = `<b>${data.name}</b><br/>Risk: ${data.risk}<br/>`;
+//         const saveBtn = document.createElement("button");
+//         saveBtn.textContent = "💾 Save Zone";
+//         saveBtn.onclick = () => {
+//           socket.emit("zone-update", data);
+//           drawnItems.removeLayer(layer); // rely on server echo to re-add
+//         };
+//         const delBtn = document.createElement("button");
+//         delBtn.textContent = "🗑️ Delete Zone";
+//         delBtn.onclick = () => {
+//           socket.emit("zone-deleted", { id: data.id });
+//           drawnItems.removeLayer(layer);
+//         };
+//         popup.appendChild(saveBtn);
+//         popup.appendChild(document.createTextNode(" "));
+//         popup.appendChild(delBtn);
+//         (layer as any).bindPopup(popup).openPopup();
+//       } else {
+//         const boundaryName = prompt("Enter Boundary Name:");
+//         if (!boundaryName) return;
+//         data.name = boundaryName;
 
 
-        if (layer instanceof L.Circle) {
-          // circle boundary uses center for downstream tourist app
-          data.type = "circle";
-          const ll = (layer as L.Circle).getLatLng();
-          data.center = { lat: ll.lat, lng: ll.lng };
-          data.radius = (layer as L.Circle).getRadius();
-          (layer as any).setStyle?.({ color: "blue", fillColor: "white", fillOpacity: 0.1, dashArray: "5,5" });
-        } else {
-          // polygon boundary
-          data.type = "polygon";
-          const latlngs = ((layer as L.Polygon).getLatLngs()[0] as L.LatLng[]).map((p) => ({ lat: p.lat, lng: p.lng }));
-          data.coords = latlngs;
-          (layer as any).setStyle?.({ color: "blue", fillColor: "white", fillOpacity: 0.1, dashArray: "5,5" });
-        }
+//         if (layer instanceof L.Circle) {
+//           // circle boundary uses center for downstream tourist app
+//           data.type = "circle";
+//           const ll = (layer as L.Circle).getLatLng();
+//           data.center = { lat: ll.lat, lng: ll.lng };
+//           data.radius = (layer as L.Circle).getRadius();
+//           (layer as any).setStyle?.({ color: "blue", fillColor: "white", fillOpacity: 0.1, dashArray: "5,5" });
+//         } else {
+//           // polygon boundary
+//           data.type = "polygon";
+//           const latlngs = ((layer as L.Polygon).getLatLngs()[0] as L.LatLng[]).map((p) => ({ lat: p.lat, lng: p.lng }));
+//           data.coords = latlngs;
+//           (layer as any).setStyle?.({ color: "blue", fillColor: "white", fillOpacity: 0.1, dashArray: "5,5" });
+//         }
 
 
-        const popup = document.createElement("div");
-        popup.innerHTML = `<b>${data.name}</b><br/>(Boundary)<br/>`;
-        const saveBtn = document.createElement("button");
-        saveBtn.textContent = "💾 Save Boundary";
-        saveBtn.onclick = () => {
-          socket.emit("boundary-update", data);
-          drawnItems.removeLayer(layer);
-        };
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "🗑️ Delete Boundary";
-        delBtn.onclick = () => {
-          socket.emit("boundary-deleted", { id: data.id });
-          drawnItems.removeLayer(layer);
-        };
-        popup.appendChild(saveBtn);
-        popup.appendChild(document.createTextNode(" "));
-        popup.appendChild(delBtn);
-        (layer as any).bindPopup(popup).openPopup();
-      }
+//         const popup = document.createElement("div");
+//         popup.innerHTML = `<b>${data.name}</b><br/>(Boundary)<br/>`;
+//         const saveBtn = document.createElement("button");
+//         saveBtn.textContent = "💾 Save Boundary";
+//         saveBtn.onclick = () => {
+//           socket.emit("boundary-update", data);
+//           drawnItems.removeLayer(layer);
+//         };
+//         const delBtn = document.createElement("button");
+//         delBtn.textContent = "🗑️ Delete Boundary";
+//         delBtn.onclick = () => {
+//           socket.emit("boundary-deleted", { id: data.id });
+//           drawnItems.removeLayer(layer);
+//         };
+//         popup.appendChild(saveBtn);
+//         popup.appendChild(document.createTextNode(" "));
+//         popup.appendChild(delBtn);
+//         (layer as any).bindPopup(popup).openPopup();
+//       }
 
 
-      // tag and add to editable group
-      (layer as any).customId = id;
-      (layer as any).category = category;
-      drawnItems.addLayer(layer);
-    };
+//       // tag and add to editable group
+//       (layer as any).customId = id;
+//       (layer as any).category = category;
+//       drawnItems.addLayer(layer);
+//     };
+
+function openAdvancedPrompt(options: {
+  title: string;
+  fields: {
+    type: "input" | "select" | "buttons";
+    label?: string;
+    placeholder?: string;
+    default?: string;
+    choices?: string[];
+    buttons?: string[];
+  }[];
+}) {
+  return new Promise<any>((resolve) => {
+    const modal = document.createElement("div");
+    modal.style = `
+      position:fixed; inset:0;
+      background:rgba(0,0,0,0.6);
+      display:flex; justify-content:center; align-items:center;
+      z-index:999999; font-family:Arial;
+    `;
+
+    const inner = document.createElement("div");
+    inner.style = `
+      background:white; padding:20px; width:330px;
+      border-radius:14px; animation:fadeIn .2s ease;
+      box-shadow:0 8px 25px rgba(0,0,0,0.25);
+    `;
+
+    inner.innerHTML = `<h2 style="margin-top:0; text-align:center;">${options.title}</h2>`;
+
+    const values: any = {};
+
+    options.fields.forEach((field, index) => {
+      if (field.type === "buttons") {
+        const wrapper = document.createElement("div");
+        wrapper.style = "display:flex; gap:10px; margin:10px 0; justify-content:center;";
+
+        field.buttons!.forEach((btn) => {
+          const b = document.createElement("button");
+          b.textContent = btn;
+          b.style = `
+            padding:10px; border:none; cursor:pointer;
+            border-radius:8px; flex:1;
+            background:#007bff; color:white;
+          `;
+          b.onclick = () => {
+            values[field.label || "choice"] = btn;
+            document.body.removeChild(modal);
+            resolve(values);
+          };
+
+          wrapper.appendChild(b);
+        });
+
+        inner.appendChild(wrapper);
+      }
+
+      if (field.type === "input") {
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        label.style = "font-size:14px; display:block; margin-top:10px;";
+        inner.appendChild(label);
+
+        const input = document.createElement("input");
+        input.placeholder = field.placeholder || "";
+        input.value = field.default || "";
+        input.style = `
+          width:100%; padding:10px; margin-top:4px;
+          border-radius:8px; border:1px solid #ccc;
+        `;
+        inner.appendChild(input);
+
+        values[field.label!] = input;
+      }
+
+      if (field.type === "select") {
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        label.style = "font-size:14px; display:block; margin-top:10px;";
+        inner.appendChild(label);
+
+        const select = document.createElement("select");
+        select.style = `
+          width:100%; padding:10px; margin-top:4px;
+          border-radius:8px; border:1px solid #ccc;
+        `;
+
+        field.choices!.forEach((choice) => {
+          const opt = document.createElement("option");
+          opt.textContent = choice;
+          opt.value = choice;
+          select.appendChild(opt);
+        });
+
+        select.value = field.default || field.choices![0];
+        inner.appendChild(select);
+
+        values[field.label!] = select;
+      }
+    });
+
+    // OK + Cancel buttons
+    const footer = document.createElement("div");
+    footer.style = "display:flex; gap:10px; margin-top:20px;";
+
+    const okBtn = document.createElement("button");
+    okBtn.textContent = "OK";
+    okBtn.style = `
+      flex:1; padding:10px; border:none; cursor:pointer;
+      background:#28a745; color:white; border-radius:8px;
+    `;
+    okBtn.onclick = () => {
+      const result: any = {};
+      Object.keys(values).forEach((key) => {
+        const val = values[key];
+        result[key] = val.value || val; 
+      });
+      document.body.removeChild(modal);
+      resolve(result);
+    };
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.style = `
+      flex:1; padding:10px; border:none; cursor:pointer;
+      background:#dc3545; color:white; border-radius:8px;
+    `;
+    cancelBtn.onclick = () => {
+      document.body.removeChild(modal);
+      resolve(null);
+    };
+
+    footer.append(okBtn, cancelBtn);
+    inner.appendChild(footer);
+
+    modal.appendChild(inner);
+    document.body.appendChild(modal);
+  });
+}
 
 
+
+
+    // Draw handlers (create/edit/delete)
+    // const onDrawCreated = (e: any) => {
+    //   const layer: L.Layer = e.layer;
+    //   const id = Date.now().toString();
+
+    //   const typeChoice = prompt("Enter Type (zone/boundary):", "zone");
+    //   if (!typeChoice) return;
+    //   const category = typeChoice.toLowerCase() === "boundary" ? "boundary" : "zone";
+
+    //   const data: any = { id, name: "", category, type: "", coords: null, radius: undefined, risk: undefined };
+
+    //   if (category === "zone") {
+    //     const zoneName = prompt("Enter Zone Name:");
+    //     const riskLevel = (prompt("Enter Risk Level (Low/Medium/High):", "Low") || "Low").toLowerCase();
+    //     if (!zoneName) return;
+    //     data.name = zoneName;
+    //     data.risk = riskLevel;
+
+    //     const color = riskToColor(data.risk);
+    //     if (layer instanceof L.Circle) {
+    //       // circle zone
+    //       data.type = "circle";
+    //       const ll = (layer as L.Circle).getLatLng();
+    //       data.coords = { lat: ll.lat, lng: ll.lng };
+    //       data.radius = (layer as L.Circle).getRadius();
+    //       (layer as any).setStyle?.({ color, fillColor: color, fillOpacity: 0.4 });
+    //     } else {
+    //       // polygon zone
+    //       data.type = "polygon";
+    //       const latlngs = ((layer as L.Polygon).getLatLngs()[0] as L.LatLng[]).map((p) => ({ lat: p.lat, lng: p.lng }));
+    //       data.coords = latlngs;
+    //       (layer as any).setStyle?.({ color, fillColor: color, fillOpacity: 0.4 });
+    //     }
+
+    //     const popup = document.createElement("div");
+    //     popup.innerHTML = `<b>${data.name}</b><br/>Risk: ${data.risk}<br/>`;
+    //     const saveBtn = document.createElement("button");
+    //     saveBtn.textContent = "💾 Save Zone";
+    //     saveBtn.onclick = () => {
+    //       socket.emit("zone-update", data);
+    //       drawnItems.removeLayer(layer); // rely on server echo to re-add
+    //     };
+    //     const delBtn = document.createElement("button");
+    //     delBtn.textContent = "🗑️ Delete Zone";
+    //     delBtn.onclick = () => {
+    //       socket.emit("zone-deleted", { id: data.id });
+    //       drawnItems.removeLayer(layer);
+    //     };
+    //     popup.appendChild(saveBtn);
+    //     popup.appendChild(document.createTextNode(" "));
+    //     popup.appendChild(delBtn);
+    //     (layer as any).bindPopup(popup).openPopup();
+    //   } else {
+    //     const boundaryName = prompt("Enter Boundary Name:");
+    //     if (!boundaryName) return;
+    //     data.name = boundaryName;
+
+    //     if (layer instanceof L.Circle) {
+    //       // circle boundary uses center for downstream tourist app
+    //       data.type = "circle";
+    //       const ll = (layer as L.Circle).getLatLng();
+    //       data.center = { lat: ll.lat, lng: ll.lng };
+    //       data.radius = (layer as L.Circle).getRadius();
+    //       (layer as any).setStyle?.({ color: "blue", fillColor: "white", fillOpacity: 0.1, dashArray: "5,5" });
+    //     } else {
+    //       // polygon boundary
+    //       data.type = "polygon";
+    //       const latlngs = ((layer as L.Polygon).getLatLngs()[0] as L.LatLng[]).map((p) => ({ lat: p.lat, lng: p.lng }));
+    //       data.coords = latlngs;
+    //       (layer as any).setStyle?.({ color: "blue", fillColor: "white", fillOpacity: 0.1, dashArray: "5,5" });
+    //     }
+
+    //     const popup = document.createElement("div");
+    //     popup.innerHTML = `<b>${data.name}</b><br/>(Boundary)<br/>`;
+    //     const saveBtn = document.createElement("button");
+    //     saveBtn.textContent = "💾 Save Boundary";
+    //     saveBtn.onclick = () => {
+    //       socket.emit("boundary-update", data);
+    //       drawnItems.removeLayer(layer);
+    //     };
+    //     const delBtn = document.createElement("button");
+    //     delBtn.textContent = "🗑️ Delete Boundary";
+    //     delBtn.onclick = () => {
+    //       socket.emit("boundary-deleted", { id: data.id });
+    //       drawnItems.removeLayer(layer);
+    //     };
+    //     popup.appendChild(saveBtn);
+    //     popup.appendChild(document.createTextNode(" "));
+    //     popup.appendChild(delBtn);
+    //     (layer as any).bindPopup(popup).openPopup();
+    //   }
+
+    //   // tag and add to editable group
+    //   (layer as any).customId = id;
+    //   (layer as any).category = category;
+    //   drawnItems.addLayer(layer);
+    // };
+    const onDrawCreated = async (e: any) => {
+  const layer: L.Layer = e.layer;
+  const id = Date.now().toString();
+
+  // Select ZONE / BOUNDARY
+  const typeChoice = await openAdvancedPrompt({
+    title: "Select Drawing Type",
+    fields: [
+      {
+        type: "buttons",
+        label: "type",
+        buttons: ["Zone", "Boundary"]
+      }
+    ]
+  });
+
+  if (!typeChoice) return;
+  const category = typeChoice.type.toLowerCase() === "boundary" ? "boundary" : "zone";
+
+  const data: any = {
+    id,
+    name: "",
+    category,
+    type: "",
+    coords: null,
+    radius: undefined,
+    risk: undefined
+  };
+
+  // ZONE UI
+  if (category === "zone") {
+    const zoneInput = await openAdvancedPrompt({
+      title: "Zone Details",
+      fields: [
+        { type: "input", label: "Zone Name", placeholder: "Enter zone name" },
+        {
+          type: "select",
+          label: "Risk Level",
+          choices: ["Low", "Medium", "High"],
+          default: "Low"
+        }
+      ]
+    });
+
+    if (!zoneInput) return;
+
+    data.name = zoneInput["Zone Name"];
+    data.risk = zoneInput["Risk Level"].toLowerCase();
+
+    const color = riskToColor(data.risk);
+
+    if (layer instanceof L.Circle) {
+      data.type = "circle";
+      const ll = layer.getLatLng();
+      data.coords = { lat: ll.lat, lng: ll.lng };
+      data.radius = layer.getRadius();
+      layer.setStyle?.({ color, fillColor: color, fillOpacity: 0.4 });
+    } else {
+      data.type = "polygon";
+      const latlngs = layer.getLatLngs()[0].map((p: any) => ({
+        lat: p.lat,
+        lng: p.lng
+      }));
+      data.coords = latlngs;
+      layer.setStyle?.({ color, fillColor: color, fillOpacity: 0.4 });
+    }
+
+    // Popup UI same as original
+    const popup = document.createElement("div");
+    popup.innerHTML = `<b>${data.name}</b><br/>Risk: ${data.risk}<br/>`;
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "💾 Save Zone";
+    saveBtn.onclick = () => {
+      socket.emit("zone-update", data);
+      drawnItems.removeLayer(layer);
+    };
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑️ Delete Zone";
+    delBtn.onclick = () => {
+      socket.emit("zone-deleted", { id: data.id });
+      drawnItems.removeLayer(layer);
+    };
+
+    popup.append(saveBtn, " ", delBtn);
+    layer.bindPopup(popup).openPopup();
+  }
+
+  // BOUNDARY UI
+  else {
+    const boundaryInput = await openAdvancedPrompt({
+      title: "Boundary Name",
+      fields: [
+        { type: "input", label: "Boundary Name", placeholder: "Enter boundary name" }
+      ]
+    });
+
+    if (!boundaryInput) return;
+    data.name = boundaryInput["Boundary Name"];
+
+    if (layer instanceof L.Circle) {
+      data.type = "circle";
+      const ll = layer.getLatLng();
+      data.center = { lat: ll.lat, lng: ll.lng };
+      data.radius = layer.getRadius();
+      layer.setStyle?.({
+        color: "blue",
+        fillColor: "white",
+        fillOpacity: 0.1,
+        dashArray: "5,5"
+      });
+    } else {
+      data.type = "polygon";
+      const latlngs = layer.getLatLngs()[0].map((p: any) => ({
+        lat: p.lat,
+        lng: p.lng
+      }));
+      data.coords = latlngs;
+      layer.setStyle?.({
+        color: "blue",
+        fillColor: "white",
+        fillOpacity: 0.1,
+        dashArray: "5,5"
+      });
+    }
+
+    const popup = document.createElement("div");
+    popup.innerHTML = `<b>${data.name}</b><br/>(Boundary)<br/>`;
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "💾 Save Boundary";
+    saveBtn.onclick = () => {
+      socket.emit("boundary-update", data);
+      drawnItems.removeLayer(layer);
+    };
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑️ Delete Boundary";
+    delBtn.onclick = () => {
+      socket.emit("boundary-deleted", { id: data.id });
+      drawnItems.removeLayer(layer);
+    };
+
+    popup.append(saveBtn, " ", delBtn);
+    layer.bindPopup(popup).openPopup();
+  }
+
+  layer.customId = id;
+  layer.category = category;
+  drawnItems.addLayer(layer);
+};
     const onDrawEdited = (e: any) => {
       e.layers.eachLayer((layer: any) => {
         const id = layer.customId;

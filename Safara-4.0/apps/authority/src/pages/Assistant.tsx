@@ -12,8 +12,8 @@ import {
   Mic, MicOff, MapPin, Loader 
 } from 'lucide-react';
 
-const GEMINI_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || 'YOUR_API_KEY';
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAyWIwhNpwf_NsVHzQOAFYZPSL8lWDJTZs`;
+const GEMINI_KEY = (import.meta as any).env?.EXPO_PUBLIC_GEMINI_API_KEY || 'YOUR_API_KEY';
+//const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAyWIwhNpwf_NsVHzQOAFYZPSL8lWDJTZs`;
 
 
 type ChatMessage = {
@@ -88,7 +88,7 @@ const Assistant: React.FC<Props> = ({ language, userLocation, onLocationRequest 
   };
 
   const askGemini = async (prompt: string) => {
-    const res = await fetch(API_URL, {
+    const res = await fetch(GEMINI_KEY , {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

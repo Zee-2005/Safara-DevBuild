@@ -30,7 +30,26 @@ const SOCKET_URL = `${SOCKET_API_BASE}`; // update as needed
 const API_BASE_URL = `${SOCKET_API_BASE}`; // update as needed
 
 type LatLng = { lat: number; lng: number };
+type EmergencyType =
+  | "medical"
+  | "harassment"
+  | "accident"
+  | "lost"
+  | "theft"
+  | "natural_disaster"
+  | "suspicious_activity"
+  | "other";
 
+const EMERGENCY_TYPE_OPTIONS: { id: EmergencyType; label: string }[] = [
+  { id: "medical", label: "Medical emergency" },
+  { id: "harassment", label: "Harassment / threat" },
+  { id: "accident", label: "Accident / injury" },
+  { id: "lost", label: "Lost / need guidance" },
+  { id: "theft", label: "Theft / missing items" },
+  { id: "natural_disaster", label: "Flood / fire / disaster" },
+  { id: "suspicious_activity", label: "Suspicious activity" },
+  { id: "other", label: "Other" },
+];
 interface SOSEmergencyProps {
   userLocation?: LatLng;
   onCancel: () => void;
@@ -78,7 +97,9 @@ export default function SOSEmergency(props: SOSEmergencyProps) {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [audioBase64, setAudioBase64] = useState<string | undefined>(undefined);
   const [photoBase64, setPhotoBase64] = useState<string | undefined>(undefined);
-
+const [emergencyType, setEmergencyType] =
+    useState<EmergencyType>("harassment");
+  const [isChildInvolved, setIsChildInvolved] = useState<boolean>(false);
   // Keep refs synced with latest user data
   useEffect(() => {
     personalRef.current = personal;
@@ -248,7 +269,7 @@ console.log(touristId);
 
       const touristName = p?.pid_full_name || storedFullName || "Unknown";
       const touristPhone = p?.pid_mobile || storedMobile || "-";
-
+       const touristEmail = p?.pid_email || (await AsyncStorage.getItem("pid_email")) || "-";
       const isDemo = !(await AsyncStorage.getItem("t_id"));
 
       const payload: any = {
@@ -256,6 +277,7 @@ console.log(touristId);
         touristName,
         touristPhone,
         location,
+         touristEmail,
         description:
           description && description.trim().length > 0
             ? description.trim()
@@ -265,8 +287,11 @@ console.log(touristId);
           video: undefined,
           photo: photoBase64,
         },
+        
         isDemo,
         timestamp: new Date().toISOString(),
+        emergencyType,
+        isChildInvolved,
       };
 
       // Server generates incident ID; keep reference slot
@@ -541,6 +566,62 @@ console.log(touristId);
               </View>
             </View>
           </View>
+
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Emergency Type</Text>
+            <Text style={styles.helperText}>
+              Choose the option that best matches your situation. This helps
+              authorities respond faster.
+            </Text>
+            <View style={styles.chipRow}>
+              {EMERGENCY_TYPE_OPTIONS.map((opt) => {
+                const selected = emergencyType === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    style={[
+                      styles.chip,
+                      selected && styles.chipSelected,
+                    ]}
+                    onPress={() => setEmergencyType(opt.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selected && styles.chipTextSelected,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable
+              style={styles.childToggleRow}
+              onPress={() => setIsChildInvolved((prev) => !prev)}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  isChildInvolved && styles.checkboxChecked,
+                ]}
+              >
+                {isChildInvolved && (
+                  <Icon
+                    name="check"
+                    size={14}
+                    color="#FFFFFF"
+                  />
+                )}
+              </View>
+              <Text style={styles.childToggleText}>
+                Incident involves a child or under‑18 traveller
+              </Text>
+            </Pressable>
+          </View>
+
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Describe the Situation</Text>
@@ -934,4 +1015,63 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: SAFETY_RED,
   },
+  helperText: {
+    fontSize: 12,
+    color: MUTED_TEXT,
+    marginBottom: 8,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 4,
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  chipSelected: {
+    backgroundColor: SAFETY_RED,
+    borderColor: SAFETY_RED,
+  },
+  chipText: {
+    fontSize: 12,
+    color: "#111827",
+  },
+  chipTextSelected: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  childToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  checkboxChecked: {
+    backgroundColor: SAFETY_RED,
+    borderColor: SAFETY_RED,
+  },
+  childToggleText: {
+    fontSize: 13,
+    color: "#111827",
+    flexShrink: 1,
+  },
+
 });
+
+
+

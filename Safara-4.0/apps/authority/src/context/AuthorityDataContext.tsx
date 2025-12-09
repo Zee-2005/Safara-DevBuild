@@ -54,6 +54,7 @@ interface Incident {
   touristId?: string;
   touristName?: string;
   touristPhone?: string;
+  touristEmail?:string;
   location?: { lat: number; lng: number };
   description?: string;
   media?: { audio?: string; video?: string; photo?: string };

@@ -725,8 +725,8 @@ ${incidents.length ? incidents.map(i => `• ${i.type} (${i.status})`).join("\n"
 
     {selectedIncidentForModal && (
       <div className="space-y-3">
-        <p><strong>ID:</strong> {selectedIncidentForModal.id}</p>
-        <p><strong>Email:</strong> {selectedIncidentForModal.touristSocketId}</p>
+        <p><strong>ID:</strong> {selectedIncidentForModal.touristId}</p>
+        <p><strong>Email:</strong> {selectedIncidentForModal.touristEmail}</p>
         <p><strong>Description:</strong> {selectedIncidentForModal.description}</p>
         <p><strong>Status:</strong> {selectedIncidentForModal.status ?? selectedIncidentForModal.time}</p>
 

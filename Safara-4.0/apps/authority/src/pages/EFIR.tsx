@@ -11,6 +11,7 @@ import { Mail, Printer, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import { io, Socket } from "socket.io-client";
 import { useLocation } from "react-router-dom";
+import { log } from "console";
 interface TouristLocation {
   id: string;
   latitude: number;
@@ -47,6 +48,8 @@ interface EFIR {
   touristName?: string;
   email?: string;
   mobile?: string;
+  latitude?: number;
+  longitude?: number;
   nationality?: string;
   description: string;
   timestamp: string;
@@ -253,6 +256,7 @@ const handleIncidentFIR = (incident:any) => {
   // Avoid duplicate FIR for same incident
   const exists = efirs.some(f => f.touristId === incident.touristId );
   if (exists) return;
+console.log(incident);
 
   const tourist = Object.values(tourists).find(t => t.id === incident.touristId);
   console.log(tourist);
