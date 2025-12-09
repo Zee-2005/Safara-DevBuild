@@ -37,7 +37,8 @@ interface ActivatedTourModeProps {
   onLogout: () => void;
 }
 
-type TourToolView = "list" | "verify-identity" | "child-portal";
+type TourToolView = "list" | "verify-identity" | "child-portal" | "family-circle";
+
 
 export default function ActivatedTourMode({
   touristId,

@@ -15,7 +15,8 @@ import {router} from './modules/tourist/tourist.routes.js';
 import { incidentRouter } from './modules/incident/incident.routes.js';
 
 import { touristRouter } from './modules/authTourist/tourist.routes.js';
-
+import invokeLlmRoute from "./routes/invokeLlmRoute.js";
+import translateRouter from "./routes/translate.route.js";
 
 
 
@@ -49,7 +50,8 @@ const __dirname = path.dirname(__filename);
   app.use('/api', api);
 app.use('/api/incidents', incidentRouter);
 app.use('/api/tourists', touristRouter);
-
+app.use(invokeLlmRoute);
+app.use("/api/translate", translateRouter);
 
   // ... previous middleware and routes
 app.use((_req, res) => res.status(404).json({ error: 'Not Found' }));

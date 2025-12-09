@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { useAuthorityData } from "@/context/AuthorityDataContext";
+import { log } from "node:console";
 
 interface Incident {
   id: string;
@@ -1540,6 +1541,7 @@ function showZoneAlert(full: any) {
   const existing = document.getElementById("active-zone-alert");
   if (existing) existing.remove();
 
+console.log(full);
 
   const alertBox = document.createElement("div");
   alertBox.id = "active-zone-alert";
@@ -1593,7 +1595,7 @@ function showZoneAlert(full: any) {
     ">Close</button>
   `;
 
-
+console.log(full);
   document.body.appendChild(alertBox);
 
 

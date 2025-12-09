@@ -20,12 +20,12 @@ import {
 } from "@expo/vector-icons";
 
 import Badge from "../ui/Badge";
-import ActivatedTourMode, {
-  TouristId,
-} from "./ActivatedTourMode";
+import ActivatedTourMode, { TouristId } from "./ActivatedTourMode";
 import SOSEmergency from "./SOSEmergency";
 import AiAssistant from "./AiAssistant";
 import { getMyTrips } from "../../lib/tourist.service";
+import { useLanguage } from "../../context/LanguageContext";
+import TranslatedText from "./TranslatedText";
 
 interface HomeScreenProps {
   userPhone?: string;
@@ -64,6 +64,8 @@ export default function HomeScreen({
   onTouristStatusChange,
   onViewModeChange,
 }: HomeScreenProps) {
+  const { language } = useLanguage();
+
   const [trips, setTrips] = useState<TripItem[]>([]);
   const [showTrips, setShowTrips] = useState(false);
   const [newCount, setNewCount] = useState(0);
@@ -105,7 +107,6 @@ export default function HomeScreen({
 
   const activeTrip = active[0] || null;
 
-  // Extended TouristId passed into Tour Mode, including data needed for QR
   const touristIdForTourMode: TouristId | null = activeTrip
     ? {
         id: activeTrip.tid,
@@ -119,7 +120,6 @@ export default function HomeScreen({
 
   const hasActiveTour = !!activeTrip;
 
-  // Only auto-jump to Tour when trip first becomes active; allow manual tab changes
   const prevHasActiveRef = useRef<boolean>(hasActiveTour);
 
   useEffect(() => {
@@ -262,9 +262,16 @@ export default function HomeScreen({
         >
           <View>
             <Text style={[styles.title, { color: textMain }]}>SaFara</Text>
-            <Text style={[styles.subtitle, { color: textSub }]}>
-              {isGuest ? "Guest Mode" : `Welcome, ${userPhone}`}
-            </Text>
+            <TranslatedText
+              text={
+                isGuest
+                  ? "Guest Mode"
+                  : `Welcome, ${userPhone || userEmail || "Traveller"}`
+              }
+              targetLang={language}
+              sourceLang="en"
+              style={[styles.subtitle, { color: textSub }]}
+            />
           </View>
           <View style={styles.iconRow}>
             {!isGuest && (
@@ -308,9 +315,12 @@ export default function HomeScreen({
 
         {isGuest && (
           <View style={[styles.guestBanner, { backgroundColor: bgGuest }]}>
-            <Text style={[styles.guestText, { color: "#2563eb" }]}>
-              Sign in to access Personal ID and full safety tools.
-            </Text>
+            <TranslatedText
+              text="Sign in to access Personal ID and full safety tools."
+              targetLang={language}
+              sourceLang="en"
+              style={[styles.guestText, { color: "#2563eb" }]}
+            />
           </View>
         )}
 
@@ -318,81 +328,77 @@ export default function HomeScreen({
           style={styles.content}
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          <View>
-            <Text
+          <TranslatedText
+            text="Travel Safety Hub"
+            targetLang={language}
+            sourceLang="en"
+            style={[styles.sectionTitle, { color: hubTitleColor }]}
+          />
+
+          {visibleSections.map((section) => (
+            <TouchableOpacity
+              key={section.id}
               style={[
-                styles.sectionTitle,
-                { color: hubTitleColor },
+                styles.sectionCard,
+                {
+                  backgroundColor: isDark ? "#020617" : "#ffffff",
+                  borderColor: isDark ? "#1f2937" : "transparent",
+                },
+                section.status === "disabled" && styles.disabledCard,
               ]}
+              onPress={() =>
+                handleSectionClick(section.id, section.status)
+              }
+              disabled={section.status === "disabled"}
             >
-              Travel Safety Hub
-            </Text>
-            {visibleSections.map((section) => (
-              <TouchableOpacity
-                key={section.id}
-                style={[
-                  styles.sectionCard,
-                  {
-                    backgroundColor: isDark ? "#020617" : "#ffffff",
-                    borderColor: isDark ? "#1f2937" : "transparent",
-                  },
-                  section.status === "disabled" && styles.disabledCard,
-                ]}
-                onPress={() =>
-                  handleSectionClick(section.id, section.status)
-                }
-                disabled={section.status === "disabled"}
-              >
-                <View style={styles.sectionInnerRow}>
-                  <View
-                    style={[
-                      styles.iconBox,
-                      { backgroundColor: section.color },
-                    ]}
-                  >
-                    {sectionIcons[section.icon]}
-                  </View>
-                  <View style={styles.sectionTextContainer}>
-                    <View style={styles.sectionTitleRow}>
-                      <Text
-                        style={[
-                          styles.sectionTitleText,
-                          { color: textMain },
-                        ]}
-                      >
-                        {section.title}
-                      </Text>
-                      {section.badge && (
-                        <Badge variant="secondary">
-                          {section.badge}
-                        </Badge>
-                      )}
-                      {section.status === "disabled" && (
-                        <Badge variant="destructive">
-                          Login Required
-                        </Badge>
-                      )}
-                      {section.status === "limited" && (
-                        <Badge variant="outline">Limited Access</Badge>
-                      )}
-                      {section.status === "view-only" && (
-                        <Badge variant="outline">View Only</Badge>
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.sectionDescription,
-                        { color: textSub },
-                      ]}
-                    >
-                      {section.description}
-                    </Text>
-                  </View>
-                  <Feather name="chevron-right" size={24} color="#6b7280" />
+              <View style={styles.sectionInnerRow}>
+                <View
+                  style={[
+                    styles.iconBox,
+                    { backgroundColor: section.color },
+                  ]}
+                >
+                  {sectionIcons[section.icon]}
                 </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                <View style={styles.sectionTextContainer}>
+                  <View style={styles.sectionTitleRow}>
+                    <TranslatedText
+                      text={section.title}
+                      targetLang={language}
+                      sourceLang="en"
+                      style={[styles.sectionTitleText, { color: textMain }]}
+                    />
+                    {section.badge && (
+                      <Badge variant="secondary">
+                        {section.badge}
+                      </Badge>
+                    )}
+                    {section.status === "disabled" && (
+                      <Badge variant="destructive">
+                        Login Required
+                      </Badge>
+                    )}
+                    {section.status === "limited" && (
+                      <Badge variant="outline">Limited Access</Badge>
+                    )}
+                    {section.status === "view-only" && (
+                      <Badge variant="outline">View Only</Badge>
+                    )}
+                  </View>
+                  <TranslatedText
+                    text={section.description}
+                    targetLang={language}
+                    sourceLang="en"
+                    style={[
+                      styles.sectionDescription,
+                      { color: textSub },
+                    ]}
+                  />
+                </View>
+                <Feather name="chevron-right" size={24} color="#6b7280" />
+              </View>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
 
         <Modal
@@ -408,14 +414,12 @@ export default function HomeScreen({
                 { backgroundColor: isDark ? "#020617" : "#ffffff" },
               ]}
             >
-              <Text
-                style={[
-                  styles.modalTitle,
-                  { color: textMain },
-                ]}
-              >
-                Your trips
-              </Text>
+              <TranslatedText
+                text="Your trips"
+                targetLang={language}
+                sourceLang="en"
+                style={[styles.modalTitle, { color: textMain }]}
+              />
               <ScrollView
                 style={{ maxHeight: 300, alignSelf: "stretch" }}
               >
@@ -427,25 +431,28 @@ export default function HomeScreen({
                   return (
                     <View key={t.tid} style={styles.tripItem}>
                       <View style={styles.tripItemHeader}>
-                        <Text
+                        <TranslatedText
+                          text={`Active • ${t.destination || "Unknown"}`}
+                          targetLang={language}
+                          sourceLang="en"
                           style={[
                             styles.tripItemTitle,
                             { color: textMain },
                           ]}
-                        >
-                          Active • {t.destination || "Unknown"}
-                        </Text>
+                        />
                         <Badge variant="secondary">Active</Badge>
                       </View>
-                      <Text
+                      <TranslatedText
+                        text={`${t.startDate} → ${t.endDate} • ends in ${daysLeft} day${
+                          daysLeft === 1 ? "" : "s"
+                        }`}
+                        targetLang={language}
+                        sourceLang="en"
                         style={[
                           styles.tripItemDetails,
                           { color: textSub },
                         ]}
-                      >
-                        {t.startDate} → {t.endDate} • ends in {daysLeft}{" "}
-                        day{daysLeft === 1 ? "" : "s"}
-                      </Text>
+                      />
                       <Text style={styles.tripId}>{t.tid}</Text>
                     </View>
                   );
@@ -459,25 +466,28 @@ export default function HomeScreen({
                   return (
                     <View key={t.tid} style={styles.tripItem}>
                       <View style={styles.tripItemHeader}>
-                        <Text
+                        <TranslatedText
+                          text={`Upcoming • ${t.destination || "Unknown"}`}
+                          targetLang={language}
+                          sourceLang="en"
                           style={[
                             styles.tripItemTitle,
                             { color: textMain },
                           ]}
-                        >
-                          Upcoming • {t.destination || "Unknown"}
-                        </Text>
+                        />
                         <Badge variant="outline">Scheduled</Badge>
                       </View>
-                      <Text
+                      <TranslatedText
+                        text={`${t.startDate} → ${t.endDate} • starts in ${daysUntil} day${
+                          daysUntil === 1 ? "" : "s"
+                        }`}
+                        targetLang={language}
+                        sourceLang="en"
                         style={[
                           styles.tripItemDetails,
                           { color: textSub },
                         ]}
-                      >
-                        {t.startDate} → {t.endDate} • starts in {daysUntil}{" "}
-                        day{daysUntil === 1 ? "" : "s"}
-                      </Text>
+                      />
                       <Text style={styles.tripId}>{t.tid}</Text>
                     </View>
                   );
@@ -486,39 +496,49 @@ export default function HomeScreen({
                 {expired.map((t) => (
                   <View key={t.tid} style={styles.tripItem}>
                     <View style={styles.tripItemHeader}>
-                      <Text
+                      <TranslatedText
+                        text={`Expired • ${t.destination || "Unknown"}`}
+                        targetLang={language}
+                        sourceLang="en"
                         style={[
                           styles.tripItemTitle,
                           { color: textMain },
                         ]}
-                      >
-                        Expired • {t.destination || "Unknown"}
-                      </Text>
+                      />
                       <Badge variant="destructive">Expired</Badge>
                     </View>
-                    <Text
+                    <TranslatedText
+                      text={`${t.startDate} → ${t.endDate}`}
+                      targetLang={language}
+                      sourceLang="en"
                       style={[
                         styles.tripItemDetails,
                         { color: textSub },
                       ]}
-                    >
-                      {t.startDate} → {t.endDate}
-                    </Text>
+                    />
                     <Text style={styles.tripId}>{t.tid}</Text>
                   </View>
                 ))}
 
                 {trips.length === 0 && (
-                  <Text style={styles.noTripText}>
-                    No trips yet. Plan a journey to see notifications here.
-                  </Text>
+                  <TranslatedText
+                    text="No trips yet. Plan a journey to see notifications here."
+                    targetLang={language}
+                    sourceLang="en"
+                    style={styles.noTripText}
+                  />
                 )}
               </ScrollView>
               <TouchableOpacity
                 onPress={() => setShowTrips(false)}
                 style={styles.closeButton}
               >
-                <Text style={styles.closeButtonText}>Close</Text>
+                <TranslatedText
+                  text="Close"
+                  targetLang={language}
+                  sourceLang="en"
+                  style={styles.closeButtonText}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -535,12 +555,18 @@ export default function HomeScreen({
           { backgroundColor: isDark ? "#020617" : "#f9fafb" },
         ]}
       >
-        <Text style={[styles.placeholderTitle, { color: textMain }]}>
-          {title}
-        </Text>
-        <Text style={[styles.placeholderText, { color: textSub }]}>
-          {desc}
-        </Text>
+        <TranslatedText
+          text={title}
+          targetLang={language}
+          sourceLang="en"
+          style={[styles.placeholderTitle, { color: textMain }]}
+        />
+        <TranslatedText
+          text={desc}
+          targetLang={language}
+          sourceLang="en"
+          style={[styles.placeholderText, { color: textSub }]}
+        />
       </View>
     );
   }
@@ -560,27 +586,27 @@ export default function HomeScreen({
         />
       )}
       {viewMode === "chat" && (
-  <AiAssistant
-    user={{
-      full_name: userPhone || userEmail || "Traveller",
-      email: userEmail || "unknown@safara.app",
-      points: 0,
-    }}
-    currentTrip={
-      activeTrip
-        ? {
-            title: activeTrip.destination || "Current trip",
-            destination: activeTrip.destination || "Unknown",
-            start_date: activeTrip.startDate,
-            end_date: activeTrip.endDate,
-            status: activeTrip.status,
-            budget: undefined,
-            spent: undefined,
+        <AiAssistant
+          user={{
+            full_name: userPhone || userEmail || "Traveller",
+            email: userEmail || "unknown@safara.app",
+            points: 0,
+          }}
+          currentTrip={
+            activeTrip
+              ? {
+                  title: activeTrip.destination || "Current trip",
+                  destination: activeTrip.destination || "Unknown",
+                  start_date: activeTrip.startDate,
+                  end_date: activeTrip.endDate,
+                  status: activeTrip.status,
+                  budget: undefined,
+                  spent: undefined,
+                }
+              : null
           }
-        : null
-    }
-  />
-)}
+        />
+      )}
 
       {viewMode === "community" &&
         renderPlaceholder(
@@ -631,14 +657,15 @@ export default function HomeScreen({
                 : "#6b7280"
             }
           />
-          <Text
+          <TranslatedText
+            text="Home"
+            targetLang={language}
+            sourceLang="en"
             style={[
               styles.footerTabText,
               viewMode === "home" && styles.footerTabTextActive,
             ]}
-          >
-            Home
-          </Text>
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -659,14 +686,15 @@ export default function HomeScreen({
                 : "#6b7280"
             }
           />
-          <Text
+          <TranslatedText
+            text="Tour"
+            targetLang={language}
+            sourceLang="en"
             style={[
               styles.footerTabText,
               viewMode === "tour" && styles.footerTabTextActive,
             ]}
-          >
-            Tour
-          </Text>
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -687,14 +715,15 @@ export default function HomeScreen({
                 : "#6b7280"
             }
           />
-          <Text
+          <TranslatedText
+            text="Chat"
+            targetLang={language}
+            sourceLang="en"
             style={[
               styles.footerTabText,
               viewMode === "chat" && styles.footerTabTextActive,
             ]}
-          >
-            Chat
-          </Text>
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -715,14 +744,15 @@ export default function HomeScreen({
                 : "#6b7280"
             }
           />
-          <Text
+          <TranslatedText
+            text="Community"
+            targetLang={language}
+            sourceLang="en"
             style={[
               styles.footerTabText,
               viewMode === "community" && styles.footerTabTextActive,
             ]}
-          >
-            Community
-          </Text>
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -743,14 +773,15 @@ export default function HomeScreen({
                 : "#6b7280"
             }
           />
-          <Text
+          <TranslatedText
+            text="Profile"
+            targetLang={language}
+            sourceLang="en"
             style={[
               styles.footerTabText,
               viewMode === "profile" && styles.footerTabTextActive,
             ]}
-          >
-            Profile
-          </Text>
+          />
         </TouchableOpacity>
       </View>
     </View>

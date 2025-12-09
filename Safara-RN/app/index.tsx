@@ -1,10 +1,9 @@
 // app/(root)/index.tsx
-
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import LanguageSelector from "../components/screens/LanguageSelector";
+import { LanguageProvider } from "../context/LanguageContext";
 import AuthScreen from "../components/screens/AuthScreen";
 import HomeScreen from "../components/screens/HomeScreen";
 import PersonalIdCreation from "../components/screens/PersonalIdCreation";
@@ -18,22 +17,18 @@ import DirectIdQuick from "../components/screens/DirectIdQuick";
 import TouristIdDocs from "../components/screens/TouristIdDocs";
 import DocumentStorage from "../components/screens/DocumentStorage";
 import TrackLocationScreen from "../components/screens/TrackLocationScreen";
+import LanguageSelector from "../components/screens/LanguageSelector";
 
 import { fetchAndSyncPersonalIdByEmail } from "../lib/personalId";
 
-export default function Index() {
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
-  const [confirmedLanguage, setConfirmedLanguage] = useState<string | null>(
-    null
-  );
+function IndexInner() {
+  const [confirmedLanguage, setConfirmedLanguage] = useState<string | null>(null);
   const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [guestMode, setGuestMode] = useState(false);
 
   const [personalId, setPersonalId] = useState<string | null>(null);
-  const [pidStep, setPidStep] = useState<null | "create" | "docs" | "details">(
-    null
-  );
+  const [pidStep, setPidStep] = useState<null | "create" | "docs" | "details">(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [showPersonalIdModal, setShowPersonalIdModal] = useState(false);
   const [personalIdInfo, setPersonalIdInfo] = useState<{
@@ -92,9 +87,7 @@ export default function Index() {
   if (!confirmedLanguage) {
     return (
       <LanguageSelector
-        selectedLanguage={selectedLanguage}
-        onLanguageSelect={setSelectedLanguage}
-        onContinue={() => setConfirmedLanguage(selectedLanguage)}
+        onContinue={() => setConfirmedLanguage("ok")}
       />
     );
   }
@@ -225,8 +218,6 @@ export default function Index() {
             setAgencyBrowseActive(true);
           } else if (section === "direct") {
             setDirectIdActive(true);
-          } else if (section === "ai") {
-            // Coming soon
           }
         }}
       />
@@ -291,12 +282,10 @@ export default function Index() {
           onTouristStatusChange={(hasActive) => {
             setHasActiveTour(hasActive);
             if (hasActive) {
-              // HomeScreen handles switching to Tour tab internally
+              // HomeScreen switches tab internally
             }
           }}
-          onViewModeChange={() => {
-            // optional: analytics hook
-          }}
+          onViewModeChange={() => {}}
         />
       </SafeAreaView>
       <PersonalIdDetailsModal
@@ -309,5 +298,13 @@ export default function Index() {
         dob={personalIdInfo.dob}
       />
     </>
+  );
+}
+
+export default function Index() {
+  return (
+    <LanguageProvider>
+      <IndexInner />
+    </LanguageProvider>
   );
 }

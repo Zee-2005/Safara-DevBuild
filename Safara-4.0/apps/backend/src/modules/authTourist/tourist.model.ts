@@ -20,6 +20,7 @@ const TouristSchema = new Schema<ITourist>(
   {
     socketId: { type: String, index: true },
     tid: { type: String, index: true },
+    
     personalId: { type: String, index: true },
     name: { type: String, required: true },
     email: { type: String },
@@ -33,6 +34,7 @@ const TouristSchema = new Schema<ITourist>(
     latitude: { type: Number },
     longitude: { type: Number },
     lastSeenAt: { type: Date },
+    
   },
   { timestamps: true }
 );

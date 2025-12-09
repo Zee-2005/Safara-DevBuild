@@ -1,7 +1,7 @@
 // src/api/base44Client.ts
 
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+  import.meta.env.VITE_API_BASE_URL || "http://10.0.12.219:3000";
 
 async function postJSON(path: string, body: unknown) {
   const apiKey = import.meta.env.BASE44_API_KEY ?? "";

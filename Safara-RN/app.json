@@ -40,7 +40,8 @@
           }
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "expo-barcode-scanner"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -23,6 +23,8 @@
     "expo": "~54.0.25",
     "expo-audio": "^1.0.16",
     "expo-av": "^16.0.8",
+    "expo-barcode-scanner": "^13.0.1",
+    "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.10",
     "expo-dev-client": "~6.0.20",
     "expo-document-picker": "^14.0.7",
