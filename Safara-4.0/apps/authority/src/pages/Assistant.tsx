@@ -12,7 +12,7 @@ import {
   Mic, MicOff, MapPin, Loader 
 } from 'lucide-react';
 
-const GEMINI_KEY = (import.meta as any).env?.EXPO_PUBLIC_GEMINI_API_KEY || 'YOUR_API_KEY';
+const GEMINI_KEY = (import.meta as any).env?.EXPO_PUBLIC_GEMINI_API_KEY || 'AIzaSyAyWIwhNpwf_NsVHzQOAFYZPSL8lWDJTZs';
 //const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAyWIwhNpwf_NsVHzQOAFYZPSL8lWDJTZs`;
 
 
